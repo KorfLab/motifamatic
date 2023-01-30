@@ -34,7 +34,7 @@ and therefore worth reporting.
 ## Position Weight Matrices ##
 
 Nucleotide patterns are generally not 100% conserved. That is, they are rarely
-just `ACGT` but more like `ACG` followed sometimes by C and sometimes by G.
+just `ACGT` but more like `ACG` followed sometimes by C and sometimes by T.
 There are several ways to represent such ambiguities in text. Biologists might
 write `ACG(C/T)` while those more on the computational spectrum might follow
 regex sytax and write `ACG[CT]`. The more proper way is to use IUPAC ambiguity
