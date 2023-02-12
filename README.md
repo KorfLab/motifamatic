@@ -103,3 +103,40 @@ floating point values of arbitrary precision.
 5. Create a motif-finder based on regex
 6. Create a motif displaying function
 7. Create a motif-finder based on discretized PWMs or full PWMs
+
+
+## Internal Representations ##
+
+A motif is internally represented by a list of dictionaries.
+
+```
+[
+    {
+        "A": 1.0,
+        "C": 0.0,
+        "G": 0.0,
+        "T": 0.0
+    },
+    {
+        "A": 0.5,
+        "C": 0.5,
+        "G": 0.0,
+        "T": 0.0
+    },
+    {
+        "A": 0.0,
+        "C": 0.0,
+        "G": 0.75,
+        "T": 0.25
+    },
+    {
+        "A": 0.25,
+        "C": 0.25,
+        "G": 0.25,
+        "T": 0.25
+    }
+]
+```
+
+Should there be a motif class? We might want attributes for name, author,
+source, etc.
