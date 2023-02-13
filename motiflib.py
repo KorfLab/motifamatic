@@ -1,5 +1,7 @@
 import gzip
 import math
+import sys
+import json
 
 def read_fasta(filename):
 
@@ -53,68 +55,72 @@ def yscale(col):
 
 def motif2svg(motif):
 
-	x = 100 + len(motif) * 20
-	y = 100
+	color = {
+		'A': 'fill="red"',
+		'C': 'fill="blue"',
+		'G': 'fill="green"',
+		'T': 'fill="orange"',
+	}
 
-	style = '<style>.sm {font:10px sans-serif;} .lg {font:66px sans-serif;}</style>'
+	G = 20
+	W = G + len(motif) * 30
+	H = 100
+	
+	# header
+	style = '<style>.sm {font:10px sans-serif;} .lg {font:70px sans-serif;}</style>'
 	xmlns = 'xmlns="http://www.w3.org/2000/svg"'
-	vbox = f'viewBox="0 0 {x} {y}'
+	vbox = f'viewBox="0 0 {W} {H}'
 	
 	svg = []
 	svg.append(f'<svg {vbox} {xmlns}>')
 	svg.append(style)
 	
 	# y-axis
-	x1 = 0
-	y1 = 0
-	x2 = 0
-	y2 = 100
-	sk = 'stroke="black"'
-	svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
-
-	
-	
-	# x-axis
-	x1 = -1
-	y1 = 101
-	x2 = 100
-	y2 = 101
+	x1 = G -2
+	y1 = G
+	x2 = G -2
+	y2 = H + G
 	sk = 'stroke="black"'
 	svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
 	
-	
-	"""
-	# bits label
-	x1 = -68
-	y1 = -15
-	svg.append(f'<g transform="rotate(-90)"> <text x="{x1}" y="{y1}" class="sm">Bits</text> </g>')
-	
-	# bits ticks and values
 	tn = ['2.0', '1.5', '1.0', '0.5', '0.0']
 	ty = [0, 25, 50, 75, 100]
-	x1 = gt -3
-	x2 = gt
+	x1 = G -5
+	x2 = G -2
 	sk = 'stroke="black"'
 	for n, y in zip(tn, ty):
-		y1 = y + gt
-		y2 = y + gt
+		y1 = y + G
+		y2 = y + G
 		svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
-		
+	
 	for n, y in zip(tn, ty):
-		y1 = y + gt + 3
-		x1 = -8
+		y1 = y + 3 + G
+		x1 = 0
 		svg.append(f'<text x="{x1}" y="{y1}" class="sm">{n}</text>')
 	
-	for col in motif:
+	# letters
+	for i, col in enumerate(motif):
 		ys = yscale(col)
-		
+		yoff = 0 # percent of pixels already used
+		xoff = i * 45 + G + 25
+		for nt, p in sorted(col.items(), key=lambda item: item[1]):
+			if p == 0: continue			
+			yp = p * ys # this nt proportion of scale
+			c = color[nt]
+			a = 'text-anchor="middle"'
+			t = f'transform="scale(1, {yp:.3f})"'
+			s = 'class="lg"'
+			x = f'x="{xoff}"'
+			y0 = (H+G) / (p * ys) # starting position
+			yd = H * yoff * p / yp # y-delta, not quite correct
+			y = f'y="{y0-yd}"'
+			
+			print(ys, nt, p, file=sys.stderr)
+			
+			svg.append(f'<g {c} {t}><text {a} {s} {x} {y}>{nt}</text></g>')
+			yoff += p
 	
-	#svg.append('<g fill="red" transform="scale(1.0, 1.0)"> <text x="10" y="109" class="lg">ACGT</text> </g>')
-	svg.append('<g fill="red"> <text x="10" y="109" class="lg">ACGT</text> </g>')
-	#svg.append('<g fill="red" transform="scale(1, 0.5)"> <text x="20" y="35" class="lg">ACGT</text> </g>')
-	#svg.append('<g fill="red" transform="scale(1, 1.0)"> <text x="20" y="35" class="lg">ACGT</text> </g>')
-	"""
-	
+	# footer
 	svg.append('</svg>\n')
-		
+	
 	return '\n'.join(svg)
