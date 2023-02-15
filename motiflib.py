@@ -62,8 +62,7 @@ def motif2svg(motif):
 		'T': 'fill="orange"',
 	}
 
-	G = 20
-	W = G + len(motif) * 30
+	W = len(motif) * 30
 	H = 100
 	
 	# header
@@ -76,33 +75,27 @@ def motif2svg(motif):
 	svg.append(style)
 	
 	# y-axis
-	x1 = G -2
-	y1 = G
-	x2 = G -2
-	y2 = H + G
+	x1 = 0
+	y1 = 0
+	x2 = 0
+	y2 = H
 	sk = 'stroke="black"'
 	svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
 	
-	tn = ['2.0', '1.5', '1.0', '0.5', '0.0']
 	ty = [0, 25, 50, 75, 100]
-	x1 = G -5
-	x2 = G -2
+	x1 = 0
+	x2 = 2
 	sk = 'stroke="black"'
-	for n, y in zip(tn, ty):
-		y1 = y + G
-		y2 = y + G
+	for y in ty:
+		y1 = y
+		y2 = y
 		svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
-	
-	for n, y in zip(tn, ty):
-		y1 = y + 3 + G
-		x1 = 0
-		svg.append(f'<text x="{x1}" y="{y1}" class="sm">{n}</text>')
 	
 	# letters
 	for i, col in enumerate(motif):
 		ys = yscale(col)
 		yoff = 0 # percent of pixels already used
-		xoff = i * 45 + G + 25
+		xoff = i * 46 + 30
 		for nt, p in sorted(col.items(), key=lambda item: item[1]):
 			if p == 0: continue			
 			yp = p * ys # this nt proportion of scale
@@ -111,14 +104,16 @@ def motif2svg(motif):
 			t = f'transform="scale(1, {yp:.3f})"'
 			s = 'class="lg"'
 			x = f'x="{xoff}"'
-			y0 = (H+G) / (p * ys) # starting position
-			yd = H * yoff * p / yp # y-delta, not quite correct
-			y = f'y="{y0-yd}"'
+			y0 = H / yp # zero position
+			yd = yoff * H / yp # y-delta, not quite correct
+			y = f'y="{y0 - yd}"'
 			
-			print(ys, nt, p, file=sys.stderr)
+			print(f'{ys:.3f} {nt} {p:.3f} {yp:.4f} {yoff:.3f}',
+				file=sys.stderr)
 			
 			svg.append(f'<g {c} {t}><text {a} {s} {x} {y}>{nt}</text></g>')
 			yoff += p
+		print(file=sys.stderr)
 	
 	# footer
 	svg.append('</svg>\n')
