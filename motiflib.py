@@ -75,12 +75,8 @@ def motif2svg(motif):
 	svg.append(style)
 
 	# y-axis
-	x1 = 0
-	y1 = 0
-	x2 = 0
-	y2 = H
 	sk = 'stroke="black"'
-	svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" {sk}/>')
+	svg.append(f'<line x1="{0}" y1="{0}" x2="{0}" y2="{H}" {sk}/>')
 
 	ty = [0, 25, 50, 75, 100]
 	x1 = 0
@@ -94,27 +90,23 @@ def motif2svg(motif):
 	# letters
 	for i, col in enumerate(motif):
 		ys = 2- entropy(col)
+		print(i, ys, file=sys.stderr)
 		if ys == 0: continue
-		yoff = 0 # percent of pixels already used
+		yoff = 0
 		xoff = i * 46 + 30
 		for nt, p in sorted(col.items(), key=lambda item: item[1]):
 			if p == 0: continue
-			yp = p * ys # this nt proportion of scale
+			yp = p * ys
 			c = color[nt]
 			a = 'text-anchor="middle"'
 			t = f'transform="scale(1, {yp:.3f})"'
 			s = 'class="lg"'
 			x = f'x="{xoff}"'
-			y0 = H / yp # zero position
-			yd = 0.5 * yoff * H / yp # y-delta, not quite correct
+			y0 = H / yp
+			yd = 0.5 * yoff * H / yp
 			y = f'y="{y0 - yd}"'
-
-			print(f'{ys:.3f} {nt} {p:.3f} {yp:.4f} {yoff:.3f}',
-				file=sys.stderr)
-
 			svg.append(f'<g {c} {t}><text {a} {s} {x} {y}>{nt}</text></g>')
 			yoff += yp
-		print(file=sys.stderr)
 
 	# footer
 	svg.append('</svg>\n')
