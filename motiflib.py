@@ -41,7 +41,6 @@ class PWM:
 		# make sure the PWM columns sum close to 1.0
 		valid = True
 		for c in self.pwm:
-			print(c)
 			if not math.isclose(1.0, sum(c.values()), abs_tol=1e-3):
 				valid = False
 				break
@@ -55,10 +54,23 @@ class PWM:
 		seqs = []
 		for name, seq in read_fasta(filename): seqs.append(seq)
 		self._from_seqs(seqs)
+
 	def _from_seqs(self, seqs):
 		self.pwm = seqs2motif(seqs)
+
 	def _from_pwm(self, pwm):
 		self.pwm = pwm
+
+	def __str__(self):
+		lines = []
+		lines.append(f'% PWM {self.name} {self.length}')
+		nts = 'ACGT'
+		for c in self.pwm:
+			vals = []
+			for nt in c: vals.append(f'{c[nt]:.4f}')
+			lines.append(' '.join(vals))
+
+		return '\n'.join(lines)
 
 	def svg(self):
 
