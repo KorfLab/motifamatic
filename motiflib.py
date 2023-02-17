@@ -72,6 +72,9 @@ class PWM:
 
 		return '\n'.join(lines)
 
+	def distance(self, method='taxi'):
+		pass
+
 	def svg(self):
 
 		color = {
@@ -143,7 +146,7 @@ def read_fasta(filename):
 	seqs = []
 
 	while True:
-		line = fp.readline();
+		line = fp.readline()
 		if line == '': break
 		line = line.rstrip()
 		if line.startswith('>'):
@@ -182,4 +185,37 @@ def entropy(col):
 		if col[nt] != 0: h -= col[nt] * math.log2(col[nt])
 	return h
 
+def read_pwm_file(filename):
 
+	if   filename == '-':          fp = sys.stdin
+	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
+	else:                          fp = open(filename)
+
+	name = None
+	pwm = []
+	while True:
+		line = fp.readline()
+		if line == '': break
+		if line.startswith('% PWM'):
+			f = line.split()
+			name = f[2]
+			length = int(f[3])
+			for i in range(length):
+				line = fp.readline()
+				f = line.split()
+				A = float(f[0])
+				C = float(f[1])
+				G = float(f[2])
+				T = float(f[3])
+				tot = A + C + G + T
+				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
+				yield PWM(pwm, name=name)
+
+def read_transfac(filename):
+	pass
+
+def read_jaspar(filename):
+	pass
+
+def align(m1, m2, gap=-2):
+	pass
