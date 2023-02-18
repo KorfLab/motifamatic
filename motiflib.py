@@ -1,8 +1,6 @@
 import gzip
 import math
 import sys
-import json
-
 
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
@@ -69,7 +67,6 @@ class PWM:
 			vals = []
 			for nt in c: vals.append(f'{c[nt]:.4f}')
 			lines.append(' '.join(vals))
-
 		return '\n'.join(lines)
 
 	def distance(self, method='taxi'):
@@ -112,7 +109,6 @@ class PWM:
 		# letters
 		for i, col in enumerate(self.pwm):
 			ys = 2- entropy(col)
-			print(i, ys, file=sys.stderr)
 			if ys == 0: continue
 			yoff = 0
 			xoff = i * 46 + 30
