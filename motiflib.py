@@ -209,7 +209,7 @@ def read_pwm_file(filename):
 				T = float(f[3])
 				tot = A + C + G + T
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
-				yield PWM(pwm, name=name)
+			yield PWM(pwm, name=name)
 
 def read_transfac(filename):
 	pass
