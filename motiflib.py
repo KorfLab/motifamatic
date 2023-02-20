@@ -208,8 +208,33 @@ def read_pwm_file(filename):
 			yield PWM(pwm, name=name)
 
 def read_transfac(filename):
-	pass
 
+	if   filename == '-':          fp = sys.stdin
+	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
+	else:                          fp = open(filename)
+	
+	name = None
+	pwm  = []
+	while True:
+		line = fp.readline()
+		if line == '': break
+		# AC = accession number, ID = identifier, NA = name
+		if line.startswith('ID'):
+			f    = line.split()
+			name = f[1]
+			pwm  = []
+		if line[0].isdigit():
+			while line[0].isdigit():
+				f = line.split()
+				A = float(f[1])
+				C = float(f[2])
+				G = float(f[3])
+				T = float(f[4])
+				tot = A + C + G + T
+				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
+				line = fp.readline()
+			yield PWM(pwm, name=name)
+					
 def read_jaspar(filename):
 	pass
 

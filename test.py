@@ -12,3 +12,6 @@ print(json.dumps(m.pwm, indent=4))
 
 for m in motiflib.read_pwm_file('test.pwm'):
 	print(m)
+	
+for m in motiflib.read_transfac('test.transfac'):
+	print(m)
