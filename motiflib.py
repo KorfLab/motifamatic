@@ -233,7 +233,7 @@ def read_transfac(filename):
 				tot = A + C + G + T
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
 				line = fp.readline()
-			yield PWM(pwm, name=name)
+			yield PWM(pwm, name=name, source='transfac')
 					
 def read_jaspar(filename):
 	pass
