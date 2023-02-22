@@ -206,7 +206,7 @@ def read_pwm_file(filename):
 				tot = A + C + G + T
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
 			yield PWM(pwm, name=name)
-
+	fp.close()
 def read_transfac(filename):
 
 	if   filename == '-':          fp = sys.stdin
@@ -234,9 +234,38 @@ def read_transfac(filename):
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
 				line = fp.readline()
 			yield PWM(pwm, name=name, source='transfac')
-					
+	fp.close()
+	
+def get_count(fp):
+	line = fp.readline()
+	counts = []
+	f = line.split()
+	for val in f[2:-1]:
+		counts.append(float(val))
+	return counts
+
 def read_jaspar(filename):
-	pass
+
+	# output is iterator obj through rows [order is A, C, G, T]
+	# FOR READING A SINGLE FILE
+	with open(filename, 'r') as f:
+		while True:
+			defline = f.readline()
+			if defline == '': break
+			words = defline.split()
+			na = get_count(f)
+			nc = get_count(f)
+			ng = get_count(f)
+			nt = get_count(f)
+			pwm = []
+			for a, c, g, t in zip(na, nc, ng, nt):
+				pwm.append({
+					'A': a / (a + c + g + t),
+					'C': c / (a + c + g + t),
+					'G': g / (a + c + g + t),
+					'T': t / (a + c + g + t)
+				})
+			yield PWM(pwm, name=words[0][1], source='jaspar')
 
 def align(m1, m2, gap=-2):
 	pass
