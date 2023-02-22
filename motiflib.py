@@ -69,9 +69,6 @@ class PWM:
 			lines.append(' '.join(vals))
 		return '\n'.join(lines)
 
-	def distance(self, method='taxi'):
-		pass
-
 	def svg(self):
 
 		color = {
@@ -131,6 +128,8 @@ class PWM:
 
 		return '\n'.join(svg)
 
+def motif_distance(m1, m2, method='taxi'):
+	pass
 
 def read_fasta(filename):
 
@@ -207,6 +206,7 @@ def read_pwm_file(filename):
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
 			yield PWM(pwm, name=name)
 	fp.close()
+
 def read_transfac(filename):
 
 	if   filename == '-':          fp = sys.stdin
@@ -264,7 +264,7 @@ def read_jaspar(filename):
 				'A': a / (a + c + g + t),
 				'C': c / (a + c + g + t),
 				'G': g / (a + c + g + t),
-				'T': t / (a + c + g + t)
+				'T': t / (a + c + g + t),
 			})
 		yield PWM(pwm, name=words[1], source='jaspar')
 
