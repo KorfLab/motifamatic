@@ -236,7 +236,7 @@ def read_transfac(filename):
 			yield PWM(pwm, name=name, source='transfac')
 	fp.close()
 	
-def get_count(fp):
+def _get_count_jaspar(fp):
 	line = fp.readline()
 	counts = []
 	f = line.split()
@@ -246,26 +246,27 @@ def get_count(fp):
 
 def read_jaspar(filename):
 
-	# output is iterator obj through rows [order is A, C, G, T]
-	# FOR READING A SINGLE FILE
-	with open(filename, 'r') as f:
-		while True:
-			defline = f.readline()
-			if defline == '': break
-			words = defline.split()
-			na = get_count(f)
-			nc = get_count(f)
-			ng = get_count(f)
-			nt = get_count(f)
-			pwm = []
-			for a, c, g, t in zip(na, nc, ng, nt):
-				pwm.append({
-					'A': a / (a + c + g + t),
-					'C': c / (a + c + g + t),
-					'G': g / (a + c + g + t),
-					'T': t / (a + c + g + t)
-				})
-			yield PWM(pwm, name=words[0][1], source='jaspar')
+	if   filename == '-':          fp = sys.stdin
+	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
+	else:                          fp = open(filename)
+	
+	while True:
+		defline = fp.readline()
+		if defline == '': break
+		words = defline.split()
+		na = _get_count_jaspar(fp)
+		nc = _get_count_jaspar(fp)
+		ng = _get_count_jaspar(fp)
+		nt = _get_count_jaspar(fp)
+		pwm = []
+		for a, c, g, t in zip(na, nc, ng, nt):
+			pwm.append({
+				'A': a / (a + c + g + t),
+				'C': c / (a + c + g + t),
+				'G': g / (a + c + g + t),
+				'T': t / (a + c + g + t)
+			})
+		yield PWM(pwm, name=words[1], source='jaspar')
 
 def align(m1, m2, gap=-2):
 	pass

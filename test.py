@@ -15,3 +15,7 @@ for m in motiflib.read_pwm_file('test.pwm'):
 	
 for m in motiflib.read_transfac('test.transfac'):
 	print(m)
+
+for m in motiflib.read_jaspar('JASPAR2022_CORE_redundant_pfms_jaspar.txt.gz'):
+	print(m)
+	break
