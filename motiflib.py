@@ -268,5 +268,80 @@ def read_jaspar(filename):
 			})
 		yield PWM(pwm, name=words[1], source='jaspar')
 
+# added function to determine manhattan distance of single nt in pwm
+def mandistance(p1, p2):
+    distance = 0.0
+    for k in p1:
+        distance += abs(p1[k]-p2[k])
+    return distance
+    
 def align(m1, m2, gap=-2):
-	pass
+    match = 3
+    mismatch = -3
+    scores = [[0.0]*(query.length+1) for _ in range(sequence.length+1)]
+    trace = [['-']*(query.length+1)for _ in range(sequence.length+1)]
+    for i in range(1,query.length+1):
+        trace[0][i] = 'L'
+    for i in range(1, sequence.length+1):
+        trace[i][0] = 'U'
+    
+    maxscore = 0
+    maxi = 0
+    maxj = 0
+    for i in range(1, query.length + 1):
+        for j in range(1, sequence.length + 1):
+            dist = mandistance(query.pwm[i-1], sequence.pwm[j-1])
+            score = 0.0
+            if dist != 2.0: 
+                score = match*(2-dist)
+            else:
+                score = mismatch
+            
+            left = scores[j-1][i] + gap
+            top = scores[j][i-1] + gap
+            di = scores[j-1][i-1] + score
+            
+            if di < 0 and left < 0 and top <0:
+                scores[j][i] = 0.0
+            elif di > top and di > left:
+                if di > maxscore:
+                    maxscore = di
+                    maxi = i
+                    maxj = j
+                scores[j][i] = di
+                trace[j][i] = 'D'
+            elif top > left:
+                scores[j][i] = top
+                trace[j][i] = 'U'
+            elif left > top:
+                scores[j][i] = left
+                trace[j][i] = 'L'
+    
+    seq = ""
+    que = ""
+    j = maxj
+    i = maxi
+    totalscore = 0.0
+    while True:
+        totalscore += scores[j][i]
+        if scores[j][i] == 0: 
+            break
+        if trace[j][i] == 'U':
+            seq += f'{i}'
+            que += '-'
+            i -= 1
+        elif trace[j][i] == 'L':
+            que += f'{j}'
+            seq += '-'
+            j -= 1
+        elif trace[j][i] == 'D':
+            que += f'{j}'
+            seq += f'{i}'
+            i -= 1
+            j -= 1
+    
+    #prints out location in sequence rather than nts
+    print(seq[::-1])
+    print(que[::-1])
+    print(f'Score: {totalscore}')
+    pass
