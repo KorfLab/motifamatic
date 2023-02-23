@@ -313,7 +313,6 @@ def ntdistance(p1, p2):
     
 def align(m1, m2, gap=-2):
     match = 3
-    mismatch = -3
     scores = [[0.0]*(m1.length+1) for _ in range(m2.length+1)]
     trace = [['-']*(m1.length+1)for _ in range(m2.length+1)]
     for i in range(1, m1.length+1):
@@ -330,8 +329,6 @@ def align(m1, m2, gap=-2):
             score = 0.0
             if dist != 2.0: 
                 score = match*(2-dist)
-            else:
-                score = mismatch*dist
             
             left = scores[j-1][i] + gap
             top = scores[j][i-1] + gap
@@ -380,4 +377,8 @@ def align(m1, m2, gap=-2):
     print(seq[::-1])
     print(que[::-1])
     print(f'Score: {totalscore}')
+    
     pass
+query = PWM('query.fa')
+seq = PWM('sequence.fa')
+align(query, seq)
