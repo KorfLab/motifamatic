@@ -377,8 +377,4 @@ def align(m1, m2, gap=-2):
     print(seq[::-1])
     print(que[::-1])
     print(f'Score: {totalscore}')
-    
     pass
-query = PWM('query.fa')
-seq = PWM('sequence.fa')
-align(query, seq)
