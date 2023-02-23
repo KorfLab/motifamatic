@@ -128,8 +128,44 @@ class PWM:
 
 		return '\n'.join(svg)
 
-def motif_distance(m1, m2, method='taxi'):
-	pass
+def _align_pwms(m1, m2):
+	alignments = []
+	if(len(m1.pwm) > len(m2.pwm)):
+		for i in range(len(m1.pwm) - len(m2.pwm) + 1):
+			pos = zip(m1.pwm[i: i + len(m2.pwm)], m2.pwm)
+			alignments.append(pos)
+	elif(len(m1.pwm) < len(m2.pwm)):
+		for i in range(len(m2.pwm) - len(m1.pwm) + 1):
+			pos = zip(m1.pwm, m2.pwm[i: i + len(m1.pwm)])
+			alignments.append(pos)
+	yield alignments
+			
+def motif_distance(m1, m2, method='taxi'):	
+	# PWMs of same length
+	if (len(m1.pwm) == len(m2.pwm)): 
+		dist = 0
+		for pos_m1, pos_m2 in zip(m1.pwm, m2.pwm):
+			for nt in pos_m1:
+				if (method == 'kl'): 
+					if (pos_m1[nt] != 0 and pos_m2[nt] != 0): 
+						dist += pos_m1[nt] * math.log2(pos_m1[nt] / pos_m2[nt])
+				else:
+						dist += abs(pos_m1[nt] - pos_m2[nt])
+	# PWMs of different length				
+	elif (len(m1.pwm) != len(m2.pwm)):
+		dist = 200
+		for windows in _align_pwms(m1, m2):
+			for i in range(len(windows)):
+				d = 0
+				for pos_m1, pos_m2 in windows[i]:
+					for nt in pos_m1:
+						if (method == 'kl'): 
+							if (pos_m1[nt] != 0 and pos_m2[nt] != 0):
+								d += pos_m1[nt] * math.log2(pos_m1[nt]/pos_m2[nt])
+						else: 	
+								d += abs(pos_m1[nt] - pos_m2[nt])
+				if (d < dist): 	dist = d
+	return dist
 
 def read_fasta(filename):
 
