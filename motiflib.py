@@ -167,6 +167,50 @@ def motif_distance(m1, m2, method='taxi'):
 				if (d < dist): 	dist = d
 	return dist
 
+#----------------------------
+
+def dl1(ps, qs):
+	# Manhattan, Taxicab, City Block
+	d = 0
+	for p, q, in zip(ps, qs):
+		d += abs(p - q)
+	return d
+
+def dl2(ps, qs):
+	# Euclidean
+	d = 0
+	for p, q in zip(ps, qs):
+		d += (p - q) ** 2
+	return d ** 0.5
+
+def dkl(ps, qs):
+	# Kullback-Leibler
+	d = 0
+	for p, q in zip(ps, qs):
+		if p != 0 and q != 0:
+			d += p * math.log2(p/q)
+	return d
+
+def cmp_motifs(m1, m2, method='taxi'):
+
+	if   method == 'taxi':   dfunc = dl1
+	elif method == 'euclid': dfunc = dl2
+	elif method == 'dkl':    dfunc = dkl
+	else: raise ValueError('unknown method type')
+	
+	if (m1.length < m2.length): (m1, m2) = (m2, m1)
+	
+	dmin = None
+	for i in range(m1.length - m2.length + 1):
+		d = 0
+		for c1, c2 in zip(m1.pwm[i:], m2.pwm):
+			d += dfunc(c1.values(), c2.values())
+		if dmin is None or d < dmin: dmin = d
+
+	return dmin
+
+#----------------------------
+
 def read_fasta(filename):
 
 	if   filename == '-':          fp = sys.stdin
@@ -176,9 +220,7 @@ def read_fasta(filename):
 	name = None
 	seqs = []
 
-	while True:
-		line = fp.readline()
-		if line == '': break
+	for line in fp:
 		line = line.rstrip()
 		if line.startswith('>'):
 			if len(seqs) > 0:
@@ -222,12 +264,10 @@ def read_pwm_file(filename):
 	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
 	else:                          fp = open(filename)
 
-	name = None
-	pwm = []
-	while True:
-		line = fp.readline()
-		if line == '': break
+	for line in fp:
 		if line.startswith('% PWM'):
+			name = None
+			pwm = []
 			f = line.split()
 			name = f[2]
 			length = int(f[3])
@@ -251,9 +291,7 @@ def read_transfac(filename):
 	
 	name = None
 	pwm  = []
-	while True:
-		line = fp.readline()
-		if line == '': break
+	for line in fp:
 		# AC = accession number, ID = identifier, NA = name
 		if line.startswith('ID'):
 			f    = line.split()
