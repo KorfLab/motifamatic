@@ -305,7 +305,7 @@ def read_jaspar(filename):
 		yield PWM(pwm, name=words[1], source='jaspar')
 
 # added function to determine manhattan distance of single nt in pwm
-def mandistance(p1, p2):
+def ntdistance(p1, p2):
     distance = 0.0
     for k in p1:
         distance += abs(p1[k]-p2[k])
@@ -314,24 +314,24 @@ def mandistance(p1, p2):
 def align(m1, m2, gap=-2):
     match = 3
     mismatch = -3
-    scores = [[0.0]*(query.length+1) for _ in range(sequence.length+1)]
-    trace = [['-']*(query.length+1)for _ in range(sequence.length+1)]
-    for i in range(1,query.length+1):
+    scores = [[0.0]*(m1.length+1) for _ in range(m2.length+1)]
+    trace = [['-']*(m1.length+1)for _ in range(m2.length+1)]
+    for i in range(1, m1.length+1):
         trace[0][i] = 'L'
-    for i in range(1, sequence.length+1):
+    for i in range(1, m2.length+1):
         trace[i][0] = 'U'
     
     maxscore = 0
     maxi = 0
     maxj = 0
-    for i in range(1, query.length + 1):
-        for j in range(1, sequence.length + 1):
-            dist = mandistance(query.pwm[i-1], sequence.pwm[j-1])
+    for i in range(1, m1.length + 1):
+        for j in range(1, m2.length + 1):
+            dist = ntdistance(m1.pwm[i-1], m2.pwm[j-1])
             score = 0.0
             if dist != 2.0: 
                 score = match*(2-dist)
             else:
-                score = mismatch
+                score = mismatch*dist
             
             left = scores[j-1][i] + gap
             top = scores[j][i-1] + gap
