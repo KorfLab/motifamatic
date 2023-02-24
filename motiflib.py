@@ -139,19 +139,19 @@ def _align_pwms(m1, m2):
 			pos = zip(m1.pwm, m2.pwm[i: i + len(m1.pwm)])
 			alignments.append(pos)
 	yield alignments
-			
-def motif_distance(m1, m2, method='taxi'):	
+
+def motif_distance(m1, m2, method='taxi'):
 	# PWMs of same length
-	if (len(m1.pwm) == len(m2.pwm)): 
+	if (len(m1.pwm) == len(m2.pwm)):
 		dist = 0
 		for pos_m1, pos_m2 in zip(m1.pwm, m2.pwm):
 			for nt in pos_m1:
-				if (method == 'kl'): 
-					if (pos_m1[nt] != 0 and pos_m2[nt] != 0): 
+				if (method == 'kl'):
+					if (pos_m1[nt] != 0 and pos_m2[nt] != 0):
 						dist += pos_m1[nt] * math.log2(pos_m1[nt] / pos_m2[nt])
 				else:
 						dist += abs(pos_m1[nt] - pos_m2[nt])
-	# PWMs of different length				
+	# PWMs of different length
 	elif (len(m1.pwm) != len(m2.pwm)):
 		dist = 200
 		for windows in _align_pwms(m1, m2):
@@ -159,36 +159,53 @@ def motif_distance(m1, m2, method='taxi'):
 				d = 0
 				for pos_m1, pos_m2 in windows[i]:
 					for nt in pos_m1:
-						if (method == 'kl'): 
+						if (method == 'kl'):
 							if (pos_m1[nt] != 0 and pos_m2[nt] != 0):
 								d += pos_m1[nt] * math.log2(pos_m1[nt]/pos_m2[nt])
-						else: 	
+						else:
 								d += abs(pos_m1[nt] - pos_m2[nt])
 				if (d < dist): 	dist = d
 	return dist
 
 #----------------------------
 
-def dl1(ps, qs):
+def check_probs(vals, tol=1e-3):
+	for val in vals: assert(val >= 0 and val <= 1)
+	assert(math.isclose(1.0, sum(vals), abs_tol=tol))
+
+def dl1(ps, qs, check=True):
 	# Manhattan, Taxicab, City Block
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+
 	d = 0
 	for p, q, in zip(ps, qs):
 		d += abs(p - q)
 	return d
 
-def dl2(ps, qs):
+def dl2(ps, qs, check=True):
 	# Euclidean
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+
 	d = 0
 	for p, q in zip(ps, qs):
 		d += (p - q) ** 2
 	return d ** 0.5
 
-def dkl(ps, qs):
-	# Kullback-Leibler
+def dkl(ps, qs, check=True):
+	# Kullback-Leibler - not recommended
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+		for p in ps: assert(p != 0)
+		for q in qs: assert(q != 0)
+
 	d = 0
 	for p, q in zip(ps, qs):
-		if p != 0 and q != 0:
-			d += p * math.log2(p/q)
+		d += p * math.log2(p/q)
 	return d
 
 def cmp_motifs(m1, m2, method='taxi'):
@@ -197,14 +214,14 @@ def cmp_motifs(m1, m2, method='taxi'):
 	elif method == 'euclid': dfunc = dl2
 	elif method == 'dkl':    dfunc = dkl
 	else: raise ValueError('unknown method type')
-	
+
 	if (m1.length < m2.length): (m1, m2) = (m2, m1)
-	
+
 	dmin = None
 	for i in range(m1.length - m2.length + 1):
 		d = 0
 		for c1, c2 in zip(m1.pwm[i:], m2.pwm):
-			d += dfunc(c1.values(), c2.values())
+			d += dfunc(c1.values(), c2.values(), check=False)
 		if dmin is None or d < dmin: dmin = d
 
 	return dmin
@@ -288,7 +305,7 @@ def read_transfac(filename):
 	if   filename == '-':          fp = sys.stdin
 	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
 	else:                          fp = open(filename)
-	
+
 	name = None
 	pwm  = []
 	for line in fp:
@@ -309,7 +326,7 @@ def read_transfac(filename):
 				line = fp.readline()
 			yield PWM(pwm, name=name, source='transfac')
 	fp.close()
-	
+
 def _get_count_jaspar(fp):
 	line = fp.readline()
 	counts = []
@@ -323,7 +340,7 @@ def read_jaspar(filename):
 	if   filename == '-':          fp = sys.stdin
 	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
 	else:                          fp = open(filename)
-	
+
 	while True:
 		defline = fp.readline()
 		if defline == '': break
@@ -348,7 +365,7 @@ def ntdistance(p1, p2):
     for k in p1:
         distance += abs(p1[k]-p2[k])
     return distance
-    
+
 def align(m1, m2, gap=-2):
     match = 3
     scores = [[0.0]*(m1.length+1) for _ in range(m2.length+1)]
@@ -357,7 +374,7 @@ def align(m1, m2, gap=-2):
         trace[0][i] = 'L'
     for i in range(1, m2.length+1):
         trace[i][0] = 'U'
-    
+
     maxscore = 0
     maxi = 0
     maxj = 0
@@ -365,13 +382,13 @@ def align(m1, m2, gap=-2):
         for j in range(1, m2.length + 1):
             dist = ntdistance(m1.pwm[i-1], m2.pwm[j-1])
             score = 0.0
-            if dist != 2.0: 
+            if dist != 2.0:
                 score = match*(2-dist)
-            
+
             left = scores[j-1][i] + gap
             top = scores[j][i-1] + gap
             di = scores[j-1][i-1] + score
-            
+
             if di < 0 and left < 0 and top <0:
                 scores[j][i] = 0.0
             elif di > top and di > left:
@@ -387,7 +404,7 @@ def align(m1, m2, gap=-2):
             elif left > top:
                 scores[j][i] = left
                 trace[j][i] = 'L'
-    
+
     seq = ""
     que = ""
     j = maxj
@@ -395,7 +412,7 @@ def align(m1, m2, gap=-2):
     totalscore = 0.0
     while True:
         totalscore += scores[j][i]
-        if scores[j][i] == 0: 
+        if scores[j][i] == 0:
             break
         if trace[j][i] == 'U':
             seq += f'{i}'
@@ -410,7 +427,7 @@ def align(m1, m2, gap=-2):
             seq += f'{i}'
             i -= 1
             j -= 1
-    
+
     #prints out location in sequence rather than nts
     print(seq[::-1])
     print(que[::-1])
