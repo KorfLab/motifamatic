@@ -2,6 +2,95 @@ import gzip
 import math
 import sys
 
+##################
+# Math Utilities #
+##################
+
+def check_probs(vals, tol=1e-3):
+	for val in vals: assert(val >= 0 and val <= 1)
+	assert(math.isclose(1.0, sum(vals), abs_tol=tol))
+
+def entropy(vals, check=True):
+	if check: check_probs(vals)
+	h = 0
+	for val in vals:
+		if val != 0: h -= val * math.log2(val)
+	return h
+
+def dl1(ps, qs, check=True):
+	# Manhattan, Taxicab, City Block
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+
+	d = 0
+	for p, q, in zip(ps, qs):
+		d += abs(p - q)
+	return d
+
+def dl2(ps, qs, check=True):
+	# Euclidean
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+
+	d = 0
+	for p, q in zip(ps, qs):
+		d += (p - q) ** 2
+	return d ** 0.5
+
+def dkl(ps, qs, check=True):
+	# Kullback-Leibler - not recommended
+	if check:
+		check_probs(ps)
+		check_probs(qs)
+		for p in ps: assert(p != 0)
+		for q in qs: assert(q != 0)
+
+	d = 0
+	for p, q in zip(ps, qs):
+		d += p * math.log2(p/q)
+	return d
+
+##################
+# File Utilities #
+##################
+
+def get_filepointer(thing):
+	if (type(thing) == str):
+		if   thing == '-':          return sys.stdin
+		elif thing.endswith('.gz'): return gzip.open(thing, 'rt')
+		else:                       return open(thing)
+	elif (type(thing)) == io.StringIO: return thing
+	elif (type(thing)) == io.TextIOWrapper: return thing
+	else: raise ValueError('unknown thing')
+	
+def read_fasta(input):
+	
+	fp = get_filepointer(input)
+
+	name = None
+	seqs = []
+
+	for line in fp:
+		line = line.rstrip()
+		if line.startswith('>'):
+			if len(seqs) > 0:
+				yield(name, ''.join(seqs))
+				name = line[1:]
+				seqs = []
+			else:
+				name = line[1:]
+		else:
+			seqs.append(line)
+
+	yield(name, ''.join(seqs))
+	fp.close()
+
+###############
+# Motif Class #
+###############
+
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
 
@@ -46,7 +135,7 @@ class PWM:
 
 		self.length = len(self.pwm)
 		self.entropy = 0
-		for c in self.pwm: self.entropy += entropy(c)
+		for c in self.pwm: self.entropy += entropy(c.values())
 
 	def _from_fasta(self, filename):
 		seqs = []
@@ -128,6 +217,110 @@ class PWM:
 
 		return '\n'.join(svg)
 
+######################
+# Motif Constructors #
+######################
+
+def seqs2motif(seqs, name=None, source=None):
+
+	count = []
+	for j in range(len(seqs[0])):
+		count.append({'A': 0, 'C': 0, 'G': 0, 'T': 0})
+	for i in range(len(seqs)):
+		for j in range(len(seqs[i])):
+			count[j][seqs[i][j]] += 1
+
+	freq = []
+	for i in range(len(count)):
+		f = {}
+		for nt in count[i]: f[nt] = count[i][nt] / len(seqs)
+		freq.append(f)
+
+	return PWM(freq, name=name, source=source)
+
+def read_pwm_file(input):
+
+	fp = get_filepointer(input)
+
+	for line in fp:
+		if line.startswith('% PWM'):
+			name = None
+			pwm = []
+			f = line.split()
+			name = f[2]
+			length = int(f[3])
+			for i in range(length):
+				line = fp.readline()
+				f = line.split()
+				A = float(f[0])
+				C = float(f[1])
+				G = float(f[2])
+				T = float(f[3])
+				tot = A + C + G + T
+				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
+			yield PWM(pwm, name=name)
+	fp.close()
+
+def read_transfac(input):
+
+	fp = get_filepointer(input)
+
+	name = None
+	pwm  = []
+	for line in fp:
+		# AC = accession number, ID = identifier, NA = name
+		if line.startswith('ID'):
+			f    = line.split()
+			name = f[1]
+			pwm  = []
+		if line[0].isdigit():
+			while line[0].isdigit():
+				f = line.split()
+				A = float(f[1])
+				C = float(f[2])
+				G = float(f[3])
+				T = float(f[4])
+				tot = A + C + G + T
+				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
+				line = fp.readline()
+			yield PWM(pwm, name=name, source='transfac')
+	fp.close()
+
+def _get_count_jaspar(fp):
+	line = fp.readline()
+	counts = []
+	f = line.split()
+	for val in f[2:-1]:
+		counts.append(float(val))
+	return counts
+
+def read_jaspar(input):
+
+	fp = get_filepointer(input)
+
+	while True:
+		defline = fp.readline()
+		if defline == '': break
+		words = defline.split()
+		na = _get_count_jaspar(fp)
+		nc = _get_count_jaspar(fp)
+		ng = _get_count_jaspar(fp)
+		nt = _get_count_jaspar(fp)
+		pwm = []
+		for a, c, g, t in zip(na, nc, ng, nt):
+			pwm.append({
+				'A': a / (a + c + g + t),
+				'C': c / (a + c + g + t),
+				'G': g / (a + c + g + t),
+				'T': t / (a + c + g + t),
+			})
+		yield PWM(pwm, name=words[1], source='jaspar')
+
+
+###################
+# Motif Utilities #
+###################
+
 def _align_pwms(m1, m2):
 	alignments = []
 	if(len(m1.pwm) > len(m2.pwm)):
@@ -167,46 +360,6 @@ def motif_distance(m1, m2, method='taxi'):
 				if (d < dist): 	dist = d
 	return dist
 
-#----------------------------
-
-def check_probs(vals, tol=1e-3):
-	for val in vals: assert(val >= 0 and val <= 1)
-	assert(math.isclose(1.0, sum(vals), abs_tol=tol))
-
-def dl1(ps, qs, check=True):
-	# Manhattan, Taxicab, City Block
-	if check:
-		check_probs(ps)
-		check_probs(qs)
-
-	d = 0
-	for p, q, in zip(ps, qs):
-		d += abs(p - q)
-	return d
-
-def dl2(ps, qs, check=True):
-	# Euclidean
-	if check:
-		check_probs(ps)
-		check_probs(qs)
-
-	d = 0
-	for p, q in zip(ps, qs):
-		d += (p - q) ** 2
-	return d ** 0.5
-
-def dkl(ps, qs, check=True):
-	# Kullback-Leibler - not recommended
-	if check:
-		check_probs(ps)
-		check_probs(qs)
-		for p in ps: assert(p != 0)
-		for q in qs: assert(q != 0)
-
-	d = 0
-	for p, q in zip(ps, qs):
-		d += p * math.log2(p/q)
-	return d
 
 def cmp_motifs(m1, m2, method='taxi'):
 
@@ -226,138 +379,7 @@ def cmp_motifs(m1, m2, method='taxi'):
 
 	return dmin
 
-#----------------------------
 
-def read_fasta(filename):
-
-	if   filename == '-':          fp = sys.stdin
-	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
-	else:                          fp = open(filename)
-
-	name = None
-	seqs = []
-
-	for line in fp:
-		line = line.rstrip()
-		if line.startswith('>'):
-			if len(seqs) > 0:
-				yield(name, ''.join(seqs))
-				name = line[1:]
-				seqs = []
-			else:
-				name = line[1:]
-		else:
-			seqs.append(line)
-
-	yield(name, ''.join(seqs))
-	fp.close()
-
-def seqs2motif(seqs):
-
-	count = []
-	for j in range(len(seqs[0])):
-		count.append({'A': 0, 'C': 0, 'G': 0, 'T': 0})
-	for i in range(len(seqs)):
-		for j in range(len(seqs[i])):
-			count[j][seqs[i][j]] += 1
-
-	freq = []
-	for i in range(len(count)):
-		f = {}
-		for nt in count[i]: f[nt] = count[i][nt] / len(seqs)
-		freq.append(f)
-
-	return freq
-
-def entropy(col):
-	h = 0
-	for nt in col:
-		if col[nt] != 0: h -= col[nt] * math.log2(col[nt])
-	return h
-
-def read_pwm_file(filename):
-
-	if   filename == '-':          fp = sys.stdin
-	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
-	else:                          fp = open(filename)
-
-	for line in fp:
-		if line.startswith('% PWM'):
-			name = None
-			pwm = []
-			f = line.split()
-			name = f[2]
-			length = int(f[3])
-			for i in range(length):
-				line = fp.readline()
-				f = line.split()
-				A = float(f[0])
-				C = float(f[1])
-				G = float(f[2])
-				T = float(f[3])
-				tot = A + C + G + T
-				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
-			yield PWM(pwm, name=name)
-	fp.close()
-
-def read_transfac(filename):
-
-	if   filename == '-':          fp = sys.stdin
-	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
-	else:                          fp = open(filename)
-
-	name = None
-	pwm  = []
-	for line in fp:
-		# AC = accession number, ID = identifier, NA = name
-		if line.startswith('ID'):
-			f    = line.split()
-			name = f[1]
-			pwm  = []
-		if line[0].isdigit():
-			while line[0].isdigit():
-				f = line.split()
-				A = float(f[1])
-				C = float(f[2])
-				G = float(f[3])
-				T = float(f[4])
-				tot = A + C + G + T
-				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
-				line = fp.readline()
-			yield PWM(pwm, name=name, source='transfac')
-	fp.close()
-
-def _get_count_jaspar(fp):
-	line = fp.readline()
-	counts = []
-	f = line.split()
-	for val in f[2:-1]:
-		counts.append(float(val))
-	return counts
-
-def read_jaspar(filename):
-
-	if   filename == '-':          fp = sys.stdin
-	elif filename.endswith('.gz'): fp = gzip.open(filename, 'rt')
-	else:                          fp = open(filename)
-
-	while True:
-		defline = fp.readline()
-		if defline == '': break
-		words = defline.split()
-		na = _get_count_jaspar(fp)
-		nc = _get_count_jaspar(fp)
-		ng = _get_count_jaspar(fp)
-		nt = _get_count_jaspar(fp)
-		pwm = []
-		for a, c, g, t in zip(na, nc, ng, nt):
-			pwm.append({
-				'A': a / (a + c + g + t),
-				'C': c / (a + c + g + t),
-				'G': g / (a + c + g + t),
-				'T': t / (a + c + g + t),
-			})
-		yield PWM(pwm, name=words[1], source='jaspar')
 
 # added function to determine manhattan distance of single nt in pwm
 def ntdistance(p1, p2):
@@ -433,3 +455,102 @@ def align(m1, m2, gap=-2):
     print(que[::-1])
     print(f'Score: {totalscore}')
     pass
+
+
+###########
+# Testing #
+###########
+
+if __name__ == '__main__':
+	import io
+	
+	fasta_file = """\
+>s1
+AAATGC
+>s2
+AAATGC
+>s3
+ACATGC
+>s4
+ACATGC
+>s5
+AGCTGC
+>s6
+AGCTGC
+>s7
+ATGTAA
+>s8
+ATGGAG
+"""
+
+	pwm_file = """\
+% PWM test1 4
+1.0 0.0 0.0 0.0
+0.0 1.0 0.0 0.0
+0.0 0.0 1.0 0.0
+0.0 0.0 0.0 1.0
+% PWM test2 3
+1.0 0.0 0.0 0.0
+0.4 0.3 0.2 0.1
+0.1 0.2 0.3 0.4
+"""
+
+	transfac_file = """\
+AC  M00001
+ID  V$MYOD_01
+P0      A      C      G      T
+01      1      2      2      0      S
+02      2      1      2      0      R
+03      3      0      1      1      A
+04      0      5      0      0      C
+//
+ID any_old_name_for_motif_1
+BF species_name_for_motif_1
+P0      A      C      G      T
+01      1      2      2      0      S
+02      2      1      2      0      R
+03      3      0      1      1      A
+04      0      5      0      0      C
+05      5      0      0      0      A
+06      0      0      4      1      G
+07      0      1      4      0      G
+08      0      0      0      5      T
+09      0      0      5      0      G
+10      0      1      2      2      K
+11      0      2      0      3      Y
+12      1      0      3      1      G
+//
+"""
+
+	jaspar_file = """\
+>MA0001.1	AGL3
+A  [     0      3     79     40     66     48     65     11     65      0 ]
+C  [    94     75      4      3      1      2      5      2      3      3 ]
+G  [     1      0      3      4      1      0      5      3     28     88 ]
+T  [     2     19     11     50     29     47     22     81      1      6 ]
+>MA0002.1	RUNX1
+A  [    10     12      4      1      2      2      0      0      0      8     13 ]
+C  [     2      2      7      1      0      8      0      0      1      2      2 ]
+G  [     3      1      1      0     23      0     26     26      0      0      4 ]
+T  [    11     11     14     24      1     16      0      0     25     16      7 ]
+"""
+
+	ff = io.StringIO(fasta_file)
+	pf = io.StringIO(pwm_file)
+	tf = io.StringIO(transfac_file)
+	jf = io.StringIO(jaspar_file)
+	
+	print('\nFASTA file')
+	seqs = []
+	for name, seq in read_fasta(ff): seqs.append(seq)
+	m1 = seqs2motif(seqs)
+	print(m1)
+
+	print('\nPWM file')
+	for m in read_pwm_file(pf): print(m)
+	
+	print('\nJASPAR file')
+	for m in read_jaspar(jf): print(m)
+	
+	print('\nTRANSFAC file')
+	for m in read_transfac(tf): print(m)
