@@ -241,10 +241,8 @@ def seqs2motif(seqs, name=None, source=None):
 def read_pwm_file(input):
 
 	fp = get_filepointer(input)
-
 	for line in fp:
 		if line.startswith('% PWM'):
-			name = None
 			pwm = []
 			f = line.split()
 			name = f[2]
@@ -264,9 +262,6 @@ def read_pwm_file(input):
 def read_transfac(input):
 
 	fp = get_filepointer(input)
-
-	name = None
-	pwm  = []
 	for line in fp:
 		# AC = accession number, ID = identifier, NA = name
 		if line.startswith('ID'):
@@ -297,7 +292,6 @@ def _get_count_jaspar(fp):
 def read_jaspar(input):
 
 	fp = get_filepointer(input)
-
 	while True:
 		defline = fp.readline()
 		if defline == '': break
@@ -315,7 +309,7 @@ def read_jaspar(input):
 				'T': t / (a + c + g + t),
 			})
 		yield PWM(pwm, name=words[1], source='jaspar')
-
+	fp.close()
 
 ###################
 # Motif Utilities #
@@ -378,8 +372,6 @@ def cmp_motifs(m1, m2, method='taxi'):
 		if dmin is None or d < dmin: dmin = d
 
 	return dmin
-
-
 
 # added function to determine manhattan distance of single nt in pwm
 def ntdistance(p1, p2):
