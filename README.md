@@ -161,14 +161,18 @@ Coding stuff
 + Convert regex to motifs -
 + Convert motifs to regex -
 + Display motifs as SVG - WIP
-+ Make a motif-finder based on strings -
++ Make a motif-finder based on strings - WIP
 + Make a motif-finder based on regex - 
 + Make a motif-finder based on discretized PWMs -
 + Make a motif-finder based on full PWMs -
 
 Data stuff
 
-+ Create test sequences for motif-finding
-+ Create motif-finder testing program
++ Create test sequences for motif-finding - WIP
+	+ motif-embedding function working-ish
+		+ background probability model rather than 25% each
+		+ sequences must be exactly the right length
+		+ coordinate system of motifs is off
+		+ reverse-complement motifs should be an option
 + Get real sequences for motif-finding
 
