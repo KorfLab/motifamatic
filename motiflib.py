@@ -143,7 +143,18 @@ class PWM:
 		self._from_seqs(seqs)
 
 	def _from_seqs(self, seqs):
-		self.pwm = seqs2motif(seqs)
+		count = []
+		for j in range(len(seqs[0])):
+			count.append({'A': 0, 'C': 0, 'G': 0, 'T': 0})
+		for i in range(len(seqs)):
+			for j in range(len(seqs[i])):
+				count[j][seqs[i][j]] += 1
+		freq = []
+		for i in range(len(count)):
+			f = {}
+			for nt in count[i]: f[nt] = count[i][nt] / len(seqs)
+			freq.append(f)
+		self.pwm = freq
 
 	def _from_pwm(self, pwm):
 		self.pwm = pwm
@@ -217,26 +228,9 @@ class PWM:
 
 		return '\n'.join(svg)
 
-######################
-# Motif Constructors #
-######################
-
-def seqs2motif(seqs, name=None, source=None):
-
-	count = []
-	for j in range(len(seqs[0])):
-		count.append({'A': 0, 'C': 0, 'G': 0, 'T': 0})
-	for i in range(len(seqs)):
-		for j in range(len(seqs[i])):
-			count[j][seqs[i][j]] += 1
-
-	freq = []
-	for i in range(len(count)):
-		f = {}
-		for nt in count[i]: f[nt] = count[i][nt] / len(seqs)
-		freq.append(f)
-
-	return PWM(freq, name=name, source=source)
+#################################
+# Motif Generating Constructors #
+#################################
 
 def read_pwm_file(input):
 
@@ -533,10 +527,10 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	jf = io.StringIO(jaspar_file)
 	
 	print('\nFASTA file')
-	seqs = []
-	for name, seq in read_fasta(ff): seqs.append(seq)
-	m1 = seqs2motif(seqs)
-	print(m1)
+	seqs = [seq for name, seq in read_fasta(ff)]
+	m = PWM(seqs, name='testfasta', source='motiflib')
+	print(m.name, m.source, m.length, m.entropy)
+	print(m)
 
 	print('\nPWM file')
 	for m in read_pwm_file(pf): print(m)
