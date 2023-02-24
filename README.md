@@ -34,13 +34,13 @@ and therefore worth reporting.
 ## Position Weight Matrices ##
 
 Nucleotide patterns are generally not 100% conserved. That is, they are rarely
-just `ACGT` but more like `ACG` followed sometimes by C and sometimes by T.
+just `ACGT` but more like `ACG` followed sometimes by `C` and sometimes by `T`.
 There are several ways to represent such ambiguities in text. Biologists might
 write `ACG(C/T)` while those more on the computational spectrum might follow
 regex sytax and write `ACG[CT]`. The more proper way is to use IUPAC ambiguity
 symbols: `ACGY`. While text representations are convenient, they show
-possiblities rather than probabilities. For example, what if C is much more
-common than T?
+possiblities rather than probabilities. For example, what if `C` is much more
+common than `T`?
 
 A Position Weight Matrix (PWM) specifies the probabilities of nucleotides at
 each position of a motif of length n. For example, below is a PWM describing
@@ -94,20 +94,18 @@ lowercase letters.
 Finally, we can also represent the individual nucleotide probabilities as
 floating point values of arbitrary precision.
 
-## Tasks ##
-
-1. Get sequences for development and testing
-2. Create a motif-finder based on k-mers
-3. Create a motif comparision function
-4. Create multiple probability models
-5. Create a motif-finder based on regex
-6. Create a motif displaying function
-7. Create a motif-finder based on discretized PWMs or full PWMs
-
-
 ## Internal Representations ##
 
-A motif is internally represented by a list of dictionaries.
+A motif is an object of type `PWM`. The `PWM` class defines the following
+attributes:
+
++ motif.name - hopefully unique
++ motif.source - could be TRANSFAC, JASPAR, etc.
++ motif.pwm - a list of dictionaries containing nucleotide probabilities
++ motif.length
++ motif.entropy - the sum of individual entropies (2 - entropy really)
+
+The internal representation of motif.pwm is as follows:
 
 ```
 [
@@ -138,5 +136,39 @@ A motif is internally represented by a list of dictionaries.
 ]
 ```
 
-Should there be a motif class? We might want attributes for name, author,
-source, etc.
+There are several ways to construct motifs:
+
++ From a fasta file - assumes all sequences are the same length
++ From a list of sequences - all equal length again
++ From a list of dictionaries of probabilities
++ From reading JASPAR, TRANSFAC, or our own formatted files
+
+The `motiflib.py` file has embedded code examples which can be run as a form of
+testing via `python3 motiflib.py`.
+
+## To Do List ##
+
+Coding stuff
+
++ Class representing PWMs - done
++ Read from our own PWM model file format - done
++ Read from TRANSFAC format - done
++ Read from JASPAR format - done
++ Compare ungapped motifs - done
++ Compare gapped motifs - WIP
++ Convert ambiguity strings to motifs - 
++ Convert motifs to ambiguity strings - 
++ Convert regex to motifs -
++ Convert motifs to regex -
++ Display motifs as SVG - WIP
++ Make a motif-finder based on strings -
++ Make a motif-finder based on regex - 
++ Make a motif-finder based on discretized PWMs -
++ Make a motif-finder based on full PWMs -
+
+Data stuff
+
++ Create test sequences for motif-finding
++ Create motif-finder testing program
++ Get real sequences for motif-finding
+
