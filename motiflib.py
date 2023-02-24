@@ -367,13 +367,6 @@ def cmp_motifs(m1, m2, method='taxi'):
 
 	return dmin
 
-# added function to determine manhattan distance of single nt in pwm
-def ntdistance(p1, p2):
-    distance = 0.0
-    for k in p1:
-        distance += abs(p1[k]-p2[k])
-    return distance
-
 def align(m1, m2, gap=-2):
     match = 3
     scores = [[0.0]*(m1.length+1) for _ in range(m2.length+1)]
@@ -388,7 +381,7 @@ def align(m1, m2, gap=-2):
     maxj = 0
     for i in range(1, m1.length + 1):
         for j in range(1, m2.length + 1):
-            dist = ntdistance(m1.pwm[i-1], m2.pwm[j-1])
+            dist = dl1(m1.pwm[i-1].values(), m2.pwm[j-1].values())
             score = 0.0
             if dist != 2.0:
                 score = match*(2-dist)
@@ -441,7 +434,6 @@ def align(m1, m2, gap=-2):
     print(que[::-1])
     print(f'Score: {totalscore}')
     pass
-
 
 ###########
 # Testing #
