@@ -526,12 +526,14 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	tf = io.StringIO(transfac_file)
 	jf = io.StringIO(jaspar_file)
 	
+	# create a motif from a fasta file
 	print('\nFASTA file')
 	seqs = [seq for name, seq in read_fasta(ff)]
 	m = PWM(seqs, name='testfasta', source='motiflib')
 	print(m.name, m.source, m.length, m.entropy)
 	print(m)
 
+	# generate motifs objects by reading motif files
 	print('\nPWM file')
 	for m in read_pwm_file(pf): print(m)
 	
