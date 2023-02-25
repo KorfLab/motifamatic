@@ -18,9 +18,8 @@ def test_checkprobs_sum():
 		motiflib.check_probs(p)
 
 """
-Tests to add
-entropy() has no tests: Meghana
+entropy() has no tests: Claire
 dl1() has no tests: Jenna
-dl2() has no tests: Sai
-dkl() has no tests: Claire
+dl2() has no tests: Meghana
+dkl() has no tests: Sai
 """
