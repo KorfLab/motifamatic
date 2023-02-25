@@ -138,8 +138,9 @@ The internal representation of motif.pwm is as follows:
 
 There are several ways to construct motifs:
 
-+ From a fasta file - assumes all sequences are the same length
-+ From a list of sequences - all equal length again
++ Random
++ From a case-sensitive degenerate nucleotide string
++ From a list of sequences - all equal length
 + From a list of dictionaries of probabilities
 + From reading JASPAR, TRANSFAC, or our own formatted files
 
@@ -151,13 +152,15 @@ testing via `python3 motiflib.py`.
 Coding stuff
 
 + Class representing PWMs - done
++ Constructor from sequences - done
++ Random constructor - done
 + Read from our own PWM model file format - done
 + Read from TRANSFAC format - done
 + Read from JASPAR format - done
 + Compare ungapped motifs - done
 + Compare gapped motifs - WIP
-+ Convert ambiguity strings to motifs - 
-+ Convert motifs to ambiguity strings - 
++ Convert ambiguity strings to motifs - done
++ Convert motifs to ambiguity strings - done
 + Convert regex to motifs -
 + Convert motifs to regex -
 + Display motifs as SVG - WIP
@@ -169,10 +172,9 @@ Coding stuff
 Data stuff
 
 + Create test sequences for motif-finding - WIP
-	+ motif-embedding function working-ish
+	+ motif-embedding function - WIP
 		+ background probability model rather than 25% each
 		+ sequences must be exactly the right length
 		+ coordinate system of motifs is off
 		+ reverse-complement motifs should be an option
 + Get real sequences for motif-finding
-
