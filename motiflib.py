@@ -1,5 +1,6 @@
 import gzip
 import math
+import random
 import sys
 
 ##################
@@ -52,6 +53,86 @@ def dkl(ps, qs, check=True):
 		d += p * math.log2(p/q)
 	return d
 
+########################################
+# Discretized Nucleotide Probabilities #
+########################################
+
+def dnp_table(probs=[0.97, 0.49, 0.33, 0.7, 0.4, 0.3]):
+	c1, c2, c3, l1, l2, l3 = probs
+	assert(c1 > 0.25)
+	assert(c2 < 0.5)
+	assert(c3 < 1/3)
+	assert(l1 > 0.25)
+	assert(l2 < 0.5)
+	assert(l3 < 1/3)
+	d1 = (1 - c1) / 3
+	d2 = 0.5 - c2
+	d3 = 1 - c3 * 3
+	m1 = (1 - l1) / 3
+	m2 = 0.5 - l2
+	m3 = 1 - l3 * 3
+	
+	return {
+		'A': {'A': c1, 'C': d1, 'G': d1, 'T': d1},
+		'C': {'A': d1, 'C': c1, 'G': d1, 'T': d1},
+		'G': {'A': d1, 'C': d1, 'G': c1, 'T': d1},
+		'T': {'A': d1, 'C': d1, 'G': d1, 'T': c1},
+		'R': {'A': c2, 'C': d2, 'G': c2, 'T': d2},
+		'Y': {'A': d2, 'C': c2, 'G': d2, 'T': c2},
+		'M': {'A': c2, 'C': c2, 'G': d2, 'T': d2},
+		'K': {'A': d2, 'C': d2, 'G': c2, 'T': c2},
+		'W': {'A': c2, 'C': d2, 'G': d2, 'T': c2},
+		'S': {'A': d2, 'C': c2, 'G': c2, 'T': d2},
+		'B': {'A': d3, 'C': c3, 'G': c3, 'T': c3},
+		'D': {'A': c3, 'C': d3, 'G': c3, 'T': c3},
+		'H': {'A': c3, 'C': c3, 'G': d3, 'T': c3},
+		'V': {'A': c3, 'C': c3, 'G': c3, 'T': d3},
+		'a': {'A': l1, 'C': m1, 'G': m1, 'T': m1},
+		'c': {'A': m1, 'C': l1, 'G': m1, 'T': m1},
+		'g': {'A': m1, 'C': m1, 'G': l1, 'T': m1},
+		't': {'A': m1, 'C': m1, 'G': m1, 'T': l1},
+		'r': {'A': l2, 'C': m2, 'G': l2, 'T': m2},
+		'y': {'A': m2, 'C': l2, 'G': m2, 'T': l2},
+		'm': {'A': l2, 'C': l2, 'G': m2, 'T': m2},
+		'k': {'A': m2, 'C': m2, 'G': l2, 'T': l2},
+		'w': {'A': l2, 'C': m2, 'G': m2, 'T': l2},
+		's': {'A': m2, 'C': l2, 'G': l2, 'T': m2},
+		'b': {'A': m3, 'C': l3, 'G': l3, 'T': l3},
+		'd': {'A': l3, 'C': m3, 'G': l3, 'T': l3},
+		'h': {'A': l3, 'C': l3, 'G': m3, 'T': l3},
+		'v': {'A': l3, 'C': l3, 'G': l3, 'T': m3},
+		'N': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+		'n': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+	}
+
+def string2pwm(string, probs=[], name=None, source=None):
+	if   len(probs) == 6:  t = dnp_table(probs)
+	elif len(probs) == 0:  t = dnp_table()
+	else: raise ValueError('requires 6 arguments')
+	
+	pwm = []
+	for nt in string:
+		if nt not in t: raise ValueError(f'letter {nt} not allowed')
+		pwm.append(t[nt])
+	return PWM(pwm=pwm, name=name, source=source)
+
+def pwm2string(pwm, probs=[]):
+	if   len(probs) == 6:  t = dnp_table(probs)
+	elif len(probs) == 0:  t = dnp_table()
+	else: raise ValueError('requires 6 arguments')
+	
+	s = ''
+	for c in pwm.pwm:
+		dmin = None
+		best = None
+		for nt in t:
+			d = dl1(c.values(), t[nt].values())
+			if dmin is None or d < dmin:
+				dmin = d
+				best = nt
+		s += best
+	return s
+
 ##################
 # File Utilities #
 ##################
@@ -94,7 +175,7 @@ def read_fasta(input):
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
 
-	def __init__(self, init, name=None, source=None):
+	def __init__(self, seqs=None, pwm=None, name=None, source=None):
 		"""
 		Attributes
 		----------
@@ -107,7 +188,7 @@ class PWM:
 
 		Initialization
 		--------------
-		+ fasta    `file`  read a fasta file of sequences
+		+ string   `str`   a motif-like string (e.g. ttNGATYTG)
 		+ seqs     `list`  a list of sequences (strings)
 		+ pwm      `list`  a list of dictionaries
 		"""
@@ -117,13 +198,11 @@ class PWM:
 		self.pwm = None
 		self.length = None
 		self.entropy = None
-
-		if   type(init) == str: self._from_fasta(init)
-		elif type(init) == list:
-			if   type(init[0]) == dict: self._from_pwm(init)
-			elif type(init[0]) == str: self._from_seqs(init)
-			else: raise ValueError('unknown init type')
-		else: raise ValueError('unknown init type')
+		
+		# initializers
+		if   pwm: self._from_pwm(pwm)
+		elif seqs: self._from_seqs(seqs)
+		else: raise ValueError('no initizer')
 
 		# make sure the PWM columns sum close to 1.0
 		valid = True
@@ -136,11 +215,6 @@ class PWM:
 		self.length = len(self.pwm)
 		self.entropy = 0
 		for c in self.pwm: self.entropy += entropy(c.values())
-
-	def _from_fasta(self, filename):
-		seqs = []
-		for name, seq in read_fasta(filename): seqs.append(seq)
-		self._from_seqs(seqs)
 
 	def _from_seqs(self, seqs):
 		count = []
@@ -250,7 +324,7 @@ def read_pwm_file(input):
 				T = float(f[3])
 				tot = A + C + G + T
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
-			yield PWM(pwm, name=name)
+			yield PWM(pwm=pwm, name=name)
 	fp.close()
 
 def read_transfac(input):
@@ -272,7 +346,7 @@ def read_transfac(input):
 				tot = A + C + G + T
 				pwm.append({'A': A/tot, 'C': C/tot, 'G': G/tot, 'T': T/tot})
 				line = fp.readline()
-			yield PWM(pwm, name=name, source='transfac')
+			yield PWM(pwm=pwm, name=name, source='transfac')
 	fp.close()
 
 def _get_count_jaspar(fp):
@@ -302,8 +376,23 @@ def read_jaspar(input):
 				'G': g / (a + c + g + t),
 				'T': t / (a + c + g + t),
 			})
-		yield PWM(pwm, name=words[1], source='jaspar')
+		yield PWM(pwm=pwm, name=words[1], source='jaspar')
 	fp.close()
+
+def random_motif(length, name=None, source=None):
+	pwm = []
+	for i in range(length):
+		a = random.random()
+		c = random.random()
+		g = random.random()
+		t = random.random()
+		tot = a + c + g + t
+		a /= tot
+		c /= tot
+		g /= tot
+		t /= tot
+		pwm.append({'A': a, 'C': c, 'G': g, 'T': t})
+	return PWM(pwm=pwm, name=name, source=source)
 
 ###################
 # Motif Utilities #
@@ -521,10 +610,22 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	# create a motif from a fasta file
 	print('\nFASTA file')
 	seqs = [seq for name, seq in read_fasta(ff)]
-	m = PWM(seqs, name='testfasta', source='motiflib')
+	m = PWM(seqs=seqs, name='testfasta', source='motiflib')
 	print(m.name, m.source, m.length, m.entropy)
 	print(m)
 
+	# create a motif from a string representation
+	print('\nString')
+	m = string2pwm('AcMBN')
+	print(m)
+	print(pwm2string(m))
+
+	# create a random motif
+	print('\nRandom')
+	m = random_motif(5, name='random')
+	print(m)
+	print(pwm2string(m))
+	
 	# generate motifs objects by reading motif files
 	print('\nPWM file')
 	for m in read_pwm_file(pf): print(m)
@@ -534,3 +635,6 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	
 	print('\nTRANSFAC file')
 	for m in read_transfac(tf): print(m)
+
+	
+	
