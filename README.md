@@ -165,9 +165,10 @@ Coding stuff
 + Convert motifs to regex -
 + Display motifs as SVG - WIP
 + Make a motif-finder based on strings - WIP
-+ Make a motif-finder based on regex - 
++ Make a motif-finder based on regex -
 + Make a motif-finder based on discretized PWMs -
 + Make a motif-finder based on full PWMs -
++ Unit testing - WIP
 
 Data stuff
 
