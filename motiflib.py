@@ -1,5 +1,6 @@
 import gzip
 import math
+import io
 import random
 import sys
 
@@ -71,7 +72,7 @@ def dnp_table(probs=[0.97, 0.49, 0.33, 0.7, 0.4, 0.3]):
 	m1 = (1 - l1) / 3
 	m2 = 0.5 - l2
 	m3 = 1 - l3 * 3
-	
+
 	return {
 		'A': {'A': c1, 'C': d1, 'G': d1, 'T': d1},
 		'C': {'A': d1, 'C': c1, 'G': d1, 'T': d1},
@@ -109,7 +110,7 @@ def string2pwm(string, probs=[], name=None, source=None):
 	if   len(probs) == 6:  t = dnp_table(probs)
 	elif len(probs) == 0:  t = dnp_table()
 	else: raise ValueError('requires 6 arguments')
-	
+
 	pwm = []
 	for nt in string:
 		if nt not in t: raise ValueError(f'letter {nt} not allowed')
@@ -120,7 +121,7 @@ def pwm2string(pwm, probs=[]):
 	if   len(probs) == 6:  t = dnp_table(probs)
 	elif len(probs) == 0:  t = dnp_table()
 	else: raise ValueError('requires 6 arguments')
-	
+
 	s = ''
 	for c in pwm.pwm:
 		dmin = None
@@ -145,9 +146,9 @@ def get_filepointer(thing):
 	elif (type(thing)) == io.StringIO: return thing
 	elif (type(thing)) == io.TextIOWrapper: return thing
 	else: raise ValueError('unknown thing')
-	
+
 def read_fasta(input):
-	
+
 	fp = get_filepointer(input)
 
 	name = None
@@ -193,12 +194,14 @@ class PWM:
 		+ pwm      `list`  a list of dictionaries
 		"""
 
+		assert(seqs is not None or pwm is not None)
+
 		self.name = name
 		self.source = source
 		self.pwm = None
 		self.length = None
 		self.entropy = None
-		
+
 		# initializers
 		if   pwm: self._from_pwm(pwm)
 		elif seqs: self._from_seqs(seqs)
@@ -242,7 +245,7 @@ class PWM:
 			for nt in c: vals.append(f'{c[nt]:.4f}')
 			lines.append(' '.join(vals))
 		return '\n'.join(lines)
-	
+
 	def generate(self):
 		seq = ""
 		for i in range(self.length):
@@ -549,10 +552,10 @@ def motifembedder(motif, motifprob, seqlen=50, seqnum=10):
 		for j in range(seqlen):
 			if random.random() < motifprob:
 				sequence += motif.generate() #generate function
-				record.append(j) # fix 
+				record.append(j) # fix
 			else:
 				sequence += random.choice("acgt")
-			
+
 		yield sequence, record
 
 def motiffinder(seqs, k):
@@ -567,129 +570,3 @@ def motiffinder(seqs, k):
 			freqs[kmer] += 1
 	for kmer in freqs:
 		print(kmer, freqs[kmer])
-	
-
-###########
-# Testing #
-###########
-
-if __name__ == '__main__':
-	import io
-	
-	fasta_file = """\
->s1
-AAATGC
->s2
-AAATGC
->s3
-ACATGC
->s4
-ACATGC
->s5
-AGCTGC
->s6
-AGCTGC
->s7
-ATGTAA
->s8
-ATGGAG
-"""
-
-	pwm_file = """\
-% PWM test1 4
-1.0 0.0 0.0 0.0
-0.0 1.0 0.0 0.0
-0.0 0.0 1.0 0.0
-0.0 0.0 0.0 1.0
-% PWM test2 3
-1.0 0.0 0.0 0.0
-0.4 0.3 0.2 0.1
-0.1 0.2 0.3 0.4
-"""
-
-	transfac_file = """\
-AC  M00001
-ID  V$MYOD_01
-P0      A      C      G      T
-01      1      2      2      0      S
-02      2      1      2      0      R
-03      3      0      1      1      A
-04      0      5      0      0      C
-//
-ID any_old_name_for_motif_1
-BF species_name_for_motif_1
-P0      A      C      G      T
-01      1      2      2      0      S
-02      2      1      2      0      R
-03      3      0      1      1      A
-04      0      5      0      0      C
-05      5      0      0      0      A
-06      0      0      4      1      G
-07      0      1      4      0      G
-08      0      0      0      5      T
-09      0      0      5      0      G
-10      0      1      2      2      K
-11      0      2      0      3      Y
-12      1      0      3      1      G
-//
-"""
-
-	jaspar_file = """\
->MA0001.1	AGL3
-A  [     0      3     79     40     66     48     65     11     65      0 ]
-C  [    94     75      4      3      1      2      5      2      3      3 ]
-G  [     1      0      3      4      1      0      5      3     28     88 ]
-T  [     2     19     11     50     29     47     22     81      1      6 ]
->MA0002.1	RUNX1
-A  [    10     12      4      1      2      2      0      0      0      8     13 ]
-C  [     2      2      7      1      0      8      0      0      1      2      2 ]
-G  [     3      1      1      0     23      0     26     26      0      0      4 ]
-T  [    11     11     14     24      1     16      0      0     25     16      7 ]
-"""
-
-	ff = io.StringIO(fasta_file)
-	pf = io.StringIO(pwm_file)
-	tf = io.StringIO(transfac_file)
-	jf = io.StringIO(jaspar_file)
-	
-	# create a motif from sequences in a fasta file
-	print('\Sequences')
-	seqs = [seq for name, seq in read_fasta(ff)]
-	m = PWM(seqs=seqs, name='testfasta', source='motiflib')
-	print(m.name, m.source, m.length, m.entropy)
-	print(m)
-
-	# create a motif from a string representation
-	print('\nString')
-	m = string2pwm('AcMBN')
-	print(m)
-	print(pwm2string(m))
-
-	# create a random motif
-	print('\nRandom')
-	m = random_motif(5, name='random')
-	print(m)
-	print(pwm2string(m))
-	
-	# generate motifs objects by reading motif files
-	print('\nPWM file')
-	for m in read_pwm_file(pf): print(m)
-	
-	print('\nJASPAR file')
-	for m in read_jaspar(jf): print(m)
-	
-	print('\nTRANSFAC file')
-	for m in read_transfac(tf): print(m)
-	
-	#----- WIP BELOW -----#
-
-	# testing motif embedding
-	motif = PWM(["ACTA", "ACCA", "ACTA", "ACCA"])
-	seqs = []
-	for seq, record in motifembedder(motif, .05):
-		print(seq, record)
-		seqs.append(seq)
-	
-	# testing k-mer based motif finder
-	motiffinder(seqs,4)
-	
