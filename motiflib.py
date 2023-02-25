@@ -538,10 +538,9 @@ def align(m1, m2, gap=-2):
     print(f'Score: {totalscore}')
     pass
 
-###
-#Motif Finding Testing
-###
-import random
+#################
+# Motif Finding #
+#################
 
 def motifembedder(motif, motifprob, seqlen=50, seqnum=10):
 	for i in range(seqnum):
@@ -653,9 +652,8 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	tf = io.StringIO(transfac_file)
 	jf = io.StringIO(jaspar_file)
 	
-	# create a motif from a fasta file
-	print('\nFASTA file')
-
+	# create a motif from sequences in a fasta file
+	print('\Sequences')
 	seqs = [seq for name, seq in read_fasta(ff)]
 	m = PWM(seqs=seqs, name='testfasta', source='motiflib')
 	print(m.name, m.source, m.length, m.entropy)
@@ -682,12 +680,16 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	
 	print('\nTRANSFAC file')
 	for m in read_transfac(tf): print(m)
+	
+	#----- WIP BELOW -----#
 
-	# testing motif embedding and kmer-based finding
+	# testing motif embedding
 	motif = PWM(["ACTA", "ACCA", "ACTA", "ACCA"])
 	seqs = []
 	for seq, record in motifembedder(motif, .05):
 		print(seq, record)
 		seqs.append(seq)
+	
+	# testing k-mer based motif finder
 	motiffinder(seqs,4)
 	
