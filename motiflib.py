@@ -168,6 +168,20 @@ class PWM:
 			for nt in c: vals.append(f'{c[nt]:.4f}')
 			lines.append(' '.join(vals))
 		return '\n'.join(lines)
+	
+	def generate(self):
+		seq = ""
+		for i in range(self.length):
+			r = random.random()
+			if r < self.pwm[i]['A']:
+				seq += "A"
+			elif r < self.pwm[i]['A']+self.pwm[i]['C']:
+				seq += "C"
+			elif r < self.pwm[i]['A'] + self.pwm[i]['C'] + self.pwm[i]['G']:
+				seq += "G"
+			else:
+				seq += "T"
+		return seq
 
 	def svg(self):
 
@@ -384,7 +398,7 @@ def align(m1, m2, gap=-2):
             dist = dl1(m1.pwm[i-1].values(), m2.pwm[j-1].values())
             score = 0.0
             if dist != 2.0:
-                score = match*(2-dist)
+                score = match+(1-dist)
 
             left = scores[j-1][i] + gap
             top = scores[j][i-1] + gap
@@ -434,6 +448,38 @@ def align(m1, m2, gap=-2):
     print(que[::-1])
     print(f'Score: {totalscore}')
     pass
+
+###
+#Motif Finding Testing
+###
+import random
+
+def motifembedder(motif, motifprob, seqlen=50, seqnum=10):
+	for i in range(seqnum):
+		sequence = ""
+		record = []
+		for j in range(seqlen):
+			if random.random() < motifprob:
+				sequence += motif.generate() #generate function
+				record.append(j) # fix 
+			else:
+				sequence += random.choice("acgt")
+			
+		yield sequence, record
+
+def motiffinder(seqs, k):
+	freqs = {}
+	total = 0
+	for seq in seqs:
+		seq = seq.upper()
+		for i in range(len(seq)-k+1):
+			kmer = seq[i:i+k]
+			if kmer not in freqs:
+				freqs[kmer] = 0
+			freqs[kmer] += 1
+	for kmer in freqs:
+		print(kmer, freqs[kmer])
+	
 
 ###########
 # Testing #
@@ -517,9 +563,10 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	pf = io.StringIO(pwm_file)
 	tf = io.StringIO(transfac_file)
 	jf = io.StringIO(jaspar_file)
-	
+	'''
 	# create a motif from a fasta file
 	print('\nFASTA file')
+
 	seqs = [seq for name, seq in read_fasta(ff)]
 	m = PWM(seqs, name='testfasta', source='motiflib')
 	print(m.name, m.source, m.length, m.entropy)
@@ -534,3 +581,11 @@ T  [    11     11     14     24      1     16      0      0     25     16      7
 	
 	print('\nTRANSFAC file')
 	for m in read_transfac(tf): print(m)
+	'''
+	motif = PWM(["ACTA", "ACCA", "ACTA", "ACCA"])
+	seqs = []
+	for seq, record in motifembedder(motif, .05):
+		print(seq, record)
+		seqs.append(seq)
+	motiffinder(seqs,4)
+		
