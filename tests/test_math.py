@@ -23,7 +23,7 @@ def test_entropy2():
 
 """
 Tests to add
-dl1()
-dl2()
-dkl()
+dl1() Jenna
+dl2() Sai
+dkl() Claire
 """
