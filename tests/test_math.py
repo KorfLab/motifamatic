@@ -17,6 +17,30 @@ def test_checkprobs_sum():
 	with pytest.raises(AssertionError):
 		motiflib.check_probs(p)
 
+def test_dl1_ok():
+	ps = [0.4, 0.3, 0.2, 0.1]
+	qs = [0.1, 0.2, 0.3, 0.4]
+	motiflib.dl1(ps, qs)
+
+def test_dl1_empty():
+	ps = []
+	qs = []
+	with pytest.raises(AssertionError):
+		motiflib.dl1(ps, qs)
+
+def test_dl1_negative():
+	ps = [1, -1, 1]
+	qs = [-0.5, 0.5, 1]
+	with pytest.raises(AssertionError):
+		motiflib.dl1(ps, qs)
+
+def test_dl1_sum():
+	ps = [0.5, 0.2, 0.1]
+	qs = [0.5, 0.6]
+	with pytest.raises(AssertionError):
+		motiflib.dl1(ps, qs)
+		
+	
 """
 entropy() has no tests: Claire
 dl1() has no tests: Jenna
