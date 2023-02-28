@@ -177,7 +177,7 @@ def read_fasta(input):
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
 
-	def __init__(self, seqs=None, pwm=None, name=None, source=None):
+	def __init__(self, seqs=None, pwm=None, string=None, name=None, source=None):
 		"""
 		Attributes
 		----------
@@ -195,7 +195,7 @@ class PWM:
 		+ pwm      `list`  a list of dictionaries
 		"""
 
-		assert(seqs is not None or pwm is not None)
+		assert(seqs is not None or pwm is not None or string is not None)
 
 		self.name = name
 		self.source = source
@@ -204,8 +204,9 @@ class PWM:
 		self.entropy = None
 
 		# initializers
-		if   pwm: self._from_pwm(pwm)
-		elif seqs: self._from_seqs(seqs)
+		if   pwm:    self._from_pwm(pwm)
+		elif seqs:   self._from_seqs(seqs)
+		elif string: self._from_string(string)
 		else: raise ValueError('no initizer')
 
 		# make sure the PWM columns sum close to 1.0
@@ -237,7 +238,17 @@ class PWM:
 	def _from_pwm(self, pwm):
 		self.pwm = pwm
 
-	def __str__(self):
+	def _from_string(self, string):
+		p = string2pwm(string)
+		self.pwm = p.pwm
+
+	def __str__(self, probs=[]):
+		return pwm2string(self, probs=probs)
+	
+	def as_string(self, probs=[]):
+		return pwm2string(self, probs=probs)
+	
+	def pwm_file(self):
 		lines = []
 		lines.append(f'% PWM {self.name} {self.length}')
 		nts = 'ACGT'
