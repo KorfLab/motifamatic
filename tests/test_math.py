@@ -1,5 +1,6 @@
 import pytest
 import math
+import sys
 
 import motiflib
 
@@ -20,7 +21,7 @@ def test_checkprobs_sum():
 def test_dl1_ok():
 	ps = [0.4, 0.3, 0.2, 0.1]
 	qs = [0.1, 0.2, 0.3, 0.4]
-	motiflib.dl1(ps, qs)
+	assert(math.isclose(motiflib.dl1(ps, qs), 0.8))
 
 def test_dl1_empty():
 	ps = []
@@ -40,10 +41,8 @@ def test_dl1_sum():
 	with pytest.raises(AssertionError):
 		motiflib.dl1(ps, qs)
 		
-	
 """
 entropy() has no tests: Claire
-dl1() has no tests: Jenna
 dl2() has no tests: Meghana
 dkl() has no tests: Sai
 """

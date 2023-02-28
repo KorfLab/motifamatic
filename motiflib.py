@@ -132,6 +132,7 @@ def pwm2string(pwm, probs=[]):
 				dmin = d
 				best = nt
 		s += best
+			
 	return s
 
 ##################
