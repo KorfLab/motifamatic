@@ -245,7 +245,7 @@ class PWM:
 	def __str__(self, probs=[]):
 		return pwm2string(self, probs=probs)
 	
-	def as_string(self, probs=[]):
+	def string(self, probs=[]):
 		return pwm2string(self, probs=probs)
 	
 	def pwm_file(self):
