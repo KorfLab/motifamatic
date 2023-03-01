@@ -40,6 +40,10 @@ def test_dl1_sum():
 	qs = [0.5, 0.6]
 	with pytest.raises(AssertionError):
 		motiflib.dl1(ps, qs)
+
+def test_entropy():
+	ps = [0.25, 0.25, 0.25, 0.25]
+	assert(motiflib.entropy(ps), 2)
 		
 """
 entropy() has no tests: Claire
