@@ -3,6 +3,7 @@ import math
 import io
 import random
 import sys
+import re
 
 ##################
 # Math Utilities #
@@ -615,3 +616,30 @@ def states(file_gen):
         states.append(temp)
     return states, marked
 
+###############################	
+# Regular Expressions and PWMs #
+################################
+
+def regex2pwm(regex, name=None, source=None):
+	pwm = []
+	positions = []
+	i = 0
+	while (i < len(regex)):
+		if (regex[i] == '['):
+			x = re.search(']', regex[i:]).start() + i
+			positions.append(regex[i+1:x])
+			i = x
+		elif (regex[i] != '[' and regex[i] != ']'):
+			positions.append(regex[i])
+		i += 1
+	for pos in positions:
+		probs = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
+		for nt in pos:
+			if nt not in probs: raise ValueError(f'letter {nt} not allowed')
+			p = 1 / len(pos)
+			probs[nt] = p
+		pwm.append(probs)
+	return PWM(pwm=pwm, name=name, source=source)
+
+def pwm2regex(pwm):
+	pass
