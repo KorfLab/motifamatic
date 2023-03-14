@@ -55,6 +55,47 @@ def dkl(ps, qs, check=True):
 		d += p * math.log2(p/q)
 	return d
 
+######################
+# Sequence Utilities #
+######################
+
+def anti(seq):
+	anti = ''
+	for nt in seq[::-1]:
+		if   nt == 'A': anti += 'T'
+		elif nt == 'C': anti += 'G'
+		elif nt == 'G': anti += 'C'
+		elif nt == 'T': anti += 'A'
+		elif nt == 'R': anti += 'Y'
+		elif nt == 'Y': anti += 'R'
+		elif nt == 'M': anti += 'K'
+		elif nt == 'K': anti += 'M'
+		elif nt == 'W': anti += 'W'
+		elif nt == 'S': anti += 'S'
+		elif nt == 'B': anti += 'V'
+		elif nt == 'D': anti += 'H'
+		elif nt == 'H': anti += 'D'
+		elif nt == 'V': anti += 'B'
+		elif nt == 'N': anti += 'N'
+		elif nt == 'a': anti += 't'
+		elif nt == 'c': anti += 'g'
+		elif nt == 'g': anti += 'c'
+		elif nt == 't': anti += 'a'
+		elif nt == 'r': anti += 'y'
+		elif nt == 'y': anti += 'r'
+		elif nt == 'm': anti += 'k'
+		elif nt == 'k': anti += 'm'
+		elif nt == 'w': anti += 'w'
+		elif nt == 's': anti += 's'
+		elif nt == 'b': anti += 'v'
+		elif nt == 'd': anti += 'h'
+		elif nt == 'h': anti += 'd'
+		elif nt == 'v': anti += 'b'
+		elif nt == 'n': anti += 'n'
+		else: raise
+	return anti
+
+
 ########################################
 # Discretized Nucleotide Probabilities #
 ########################################
@@ -133,7 +174,7 @@ def pwm2string(pwm, probs=[]):
 				dmin = d
 				best = nt
 		s += best
-			
+
 	return s
 
 ##################
@@ -245,10 +286,10 @@ class PWM:
 
 	def __str__(self, probs=[]):
 		return pwm2string(self, probs=probs)
-	
+
 	def string(self, probs=[]):
 		return pwm2string(self, probs=probs)
-	
+
 	def pwm_file(self):
 		lines = []
 		lines.append(f'% PWM {self.name} {self.length}')
@@ -558,18 +599,28 @@ def align(m1, m2, gap=-2):
 # Motif Finding #
 #################
 
-def motifembedder(motif, motifprob, seqlen=50, seqnum=10):
-	for i in range(seqnum):
-		sequence = ""
-		record = []
-		for j in range(seqlen):
-			if random.random() < motifprob:
-				sequence += motif.generate() #generate function
-				record.append(j) # fix
-			else:
-				sequence += random.choice("acgt")
+def motifembedder(pwm, p, size, choice='acgt', strand='='):
+	seq = ''
+	locs = []
+	while len(seq) < size:
+		if len(seq) > 0 and len(seq) < size - pwm.length and random.random() < p:
+			kmer = pwm.generate()
+			loc = len(seq)
+			if   strand == '=': s = random.choice('+-')
+			elif strand == '+': s = '+'
+			else:               s = '-'
 
-		yield sequence, record
+
+			if s == '+':
+				seq += kmer
+				locs.append(loc)
+			else:
+				seq += anti(kmer)
+				locs.append(-loc)
+		else:
+			seq += random.choice(choice)
+
+	return seq, locs
 
 def motiffinder(seqs, k):
 	freqs = {}
@@ -596,27 +647,27 @@ def states(file_gen):
         temp = []
         for i in line[1]:
             if i != "-": temp.append(True)
-            else:temp.append(False)                
-        bool_states.append(temp)    
-    marked = []    
+            else:temp.append(False)
+        bool_states.append(temp)
+    marked = []
     for i in range(len(bool_states[0])):
         count = 0
         for j in range(len(bool_states)):
             if bool_states[j][i] == True: count += 1
-        if count > 0.5*len(bool_states): marked.append("M")            
-        else: marked.append("I")          
+        if count > 0.5*len(bool_states): marked.append("M")
+        else: marked.append("I")
     states = []
     for row in bool_states:
         temp = []
         for ind_col, col in enumerate(row):
-            if col == True and marked[ind_col] == "M": temp.append("M")                
-            elif col == False and marked[ind_col] == "M": temp.append("D")                
-            elif col == True and marked[ind_col] == "I": temp.append("I")                
-            else: temp.append("-")                
+            if col == True and marked[ind_col] == "M": temp.append("M")
+            elif col == False and marked[ind_col] == "M": temp.append("D")
+            elif col == True and marked[ind_col] == "I": temp.append("I")
+            else: temp.append("-")
         states.append(temp)
     return states, marked
 
-###############################	
+################################
 # Regular Expressions and PWMs #
 ################################
 
@@ -641,5 +692,28 @@ def regex2pwm(regex, name=None, source=None):
 		pwm.append(probs)
 	return PWM(pwm=pwm, name=name, source=source)
 
+
+NT2RE = {
+	'A': 'A',
+	'C': 'C',
+	'G': 'G',
+	'T': 'T',
+	'R': '[AG]',
+	'Y': '[CT]',
+	'M': '[AC]',
+	'K': '[GT]',
+	'W': '[AT]',
+	'S': '[CG]',
+	'B': '[CGT]',
+	'D': '[AGT]',
+	'H': '[ACT]',
+	'V': '[ACG]',
+	'N': '[ACGT]',
+}
+
 def pwm2regex(pwm):
-	pass
+	regex = ''
+	for letter in pwm2string(pwm):
+		if letter not in NT2RE: regex += '[ACGT]'
+		else:                   regex += NT2RE[letter]
+	return regex
