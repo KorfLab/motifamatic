@@ -622,6 +622,25 @@ def motifembedder(pwm, p, size, choice='acgt', strand='='):
 
 	return seq, locs
 
+"""
+A motif-finder returns the top-n motifs given
+	seqs: a list of sequences of arbitrary length
+	k: length of motif
+	n: maximum number of best motifs
+	b: some background model (nth order MM)
+	s: some scoring model (uses distribution of counts in lists)
+"""
+
+def kmer_finder(seqs, k):
+	pass
+
+def regex_finder(seqs, k):
+	pass
+
+def dpwm_finder(seqs, k):
+	pass
+
+
 def motiffinder(seqs, k):
 	freqs = {}
 	total = 0
