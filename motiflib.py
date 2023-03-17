@@ -1,6 +1,7 @@
 import gzip
 import math
 import io
+import itertools
 import random
 import sys
 import re
@@ -54,6 +55,157 @@ def dkl(ps, qs, check=True):
 	for p, q in zip(ps, qs):
 		d += p * math.log2(p/q)
 	return d
+
+######################
+# Sequence Utilities #
+######################
+
+def anti(seq):
+	anti = ''
+	for nt in seq[::-1]:
+		if   nt == 'A': anti += 'T'
+		elif nt == 'C': anti += 'G'
+		elif nt == 'G': anti += 'C'
+		elif nt == 'T': anti += 'A'
+		elif nt == 'R': anti += 'Y'
+		elif nt == 'Y': anti += 'R'
+		elif nt == 'M': anti += 'K'
+		elif nt == 'K': anti += 'M'
+		elif nt == 'W': anti += 'W'
+		elif nt == 'S': anti += 'S'
+		elif nt == 'B': anti += 'V'
+		elif nt == 'D': anti += 'H'
+		elif nt == 'H': anti += 'D'
+		elif nt == 'V': anti += 'B'
+		elif nt == 'N': anti += 'N'
+		elif nt == 'a': anti += 't'
+		elif nt == 'c': anti += 'g'
+		elif nt == 'g': anti += 'c'
+		elif nt == 't': anti += 'a'
+		elif nt == 'r': anti += 'y'
+		elif nt == 'y': anti += 'r'
+		elif nt == 'm': anti += 'k'
+		elif nt == 'k': anti += 'm'
+		elif nt == 'w': anti += 'w'
+		elif nt == 's': anti += 's'
+		elif nt == 'b': anti += 'v'
+		elif nt == 'd': anti += 'h'
+		elif nt == 'h': anti += 'd'
+		elif nt == 'v': anti += 'b'
+		elif nt == 'n': anti += 'n'
+		else: raise
+	return anti
+
+
+#######################
+# MM/Background Class #
+#######################
+
+class MM:
+	"""Class representing a Markov model of nucleotide probabilities."""
+
+	def __init__(self, seqs, order=0, pseudo=1.0, name=None):
+		"""
+		Initialization
+		--------------
+		+ seqs     `list`  a list of nt sequences (strings)
+		+ order    `int`   integer >= 0, default 0
+		+ name     `str`   optional name, default None
+		+ pseudo   `float` optional pseudocount, default 1.0
+
+		Attributes
+		----------
+		+ name     `str`
+		+ order    `int`
+		+ mm       `dict`  [context dict][nt dict]
+
+		Methods
+		-------
+		+ prob(seq)        probability of generating sequence
+		+ generate(len)    generate a sequence of some length
+		+ mm_file()        file representation
+		"""
+
+		self.name = name
+		self.order = order
+		self.mm = {}
+
+		# init
+		counts = {}
+		if order == 0:
+			counts = {'A':pseudo, 'C':pseudo, 'G':pseudo, 'T':pseudo}
+		else:
+			for nts in itertools.product('ACGT', repeat=order):
+				ctx = ''.join(nts)
+				counts[ctx] = {'A':pseudo, 'C':pseudo, 'G':pseudo, 'T':pseudo}
+
+		# add counts
+		for seq in seqs:
+			for i in range(order, len(seq) - order):
+				if order == 0:
+					nt = seq[i]
+					counts[nt] += 1
+				else:
+					ctx = seq[i-order:i]
+					nt = seq[i]
+					counts[ctx][nt] += 1
+
+		# assign frequencies
+		if order == 0:
+			total = sum(counts.values())
+			for nt in counts: self.mm[nt] = counts[nt] / total
+		else:
+			for ctx in counts:
+				total = sum(counts[ctx].values())
+				if total == 0:
+					raise Exception("not enough observations for context")
+				self.mm[ctx] = {}
+				for nt in counts[ctx]:
+					self.mm[ctx][nt] = counts[ctx][nt] / total
+
+	def prob(self, seq):
+		if self.order == 0:
+			p = 1.0
+			for nt in seq: p *= self.mm[nt]
+			return p
+
+		assert(len(seq) > self.order)
+		p = 1.0
+		for i in range(self.order, len(seq)):
+			ctx = seq[i-self.order:i]
+			nt = seq[i]
+			p *= self.mm[ctx][nt]
+		return p
+
+	def generate(self, n, pre='', marg=[0.25, 0.25, 0.25, 0.25]):
+		if self.order == 0:
+			s = ''
+			for i in range(n):
+				s += random.choices('ACGT', weights=self.mm.values())[0]
+			return s
+
+		s = pre
+		while len(s) < self.order:
+			s += random.choices('ACGT', weights=marg)[0]
+
+		for i in range(len(s), n):
+			ctx = s[i-self.order:i]
+			s += random.choices('ACGT', weights=self.mm[ctx].values())[0]
+		return s
+
+	def mm_file(self):
+		lines = []
+		lines.append(f'% MM {self.name} {4**(self.order+1)}')
+		if self.order == 0:
+			for nt in 'ACGT':
+				lines.append(f'{nt} {self.mm[nt]:.6f}')
+		else:
+			for ctx in self.mm:
+				for nt in 'ACGT':
+					lines.append(f'{ctx}{nt} {self.mm[ctx][nt]:.6f}')
+				lines.append('')
+		return '\n'.join(lines)
+
 
 ########################################
 # Discretized Nucleotide Probabilities #
@@ -133,7 +285,7 @@ def pwm2string(pwm, probs=[]):
 				dmin = d
 				best = nt
 		s += best
-			
+
 	return s
 
 ##################
@@ -171,29 +323,36 @@ def read_fasta(input):
 	yield(name, ''.join(seqs))
 	fp.close()
 
-###############
-# Motif Class #
-###############
+###################
+# PWM/Motif Class #
+###################
 
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
 
 	def __init__(self, seqs=None, pwm=None, string=None, name=None, source=None):
 		"""
+		Initialization (choose one of the options below)
+		--------------
+		+ string   `str`   an optional motif-like string (e.g. ttNGATYTG)
+		+ seqs     `list`  an optional list of sequences (strings)
+		+ pwm      `list`  an optional list of dictionaries
+
 		Attributes
 		----------
-		+ name     `str`   object of type `sequence.DNA`
+		+ name     `str`   name, if given
 		+ source   `str`   origin of data, if known
 		+ pwm      `list`  a list of `dict` {ACGT}
 		+ length   `int`   length of PWM
 		+ entropy  `float` sum entropy (or actually 2-H)
 
-
-		Initialization
-		--------------
-		+ string   `str`   a motif-like string (e.g. ttNGATYTG)
-		+ seqs     `list`  a list of sequences (strings)
-		+ pwm      `list`  a list of dictionaries
+		Methods
+		-------
+		+ prob(seq)        probability of generating sequence
+		+ generate()       an exemplar sequence
+		+ string()         a string representation
+		+ pwm_file()       a PWM file representation
+		+ svg()            an SVG representation
 		"""
 
 		assert(seqs is not None or pwm is not None or string is not None)
@@ -245,19 +404,10 @@ class PWM:
 
 	def __str__(self, probs=[]):
 		return pwm2string(self, probs=probs)
-	
-	def string(self, probs=[]):
-		return pwm2string(self, probs=probs)
-	
-	def pwm_file(self):
-		lines = []
-		lines.append(f'% PWM {self.name} {self.length}')
-		nts = 'ACGT'
-		for c in self.pwm:
-			vals = []
-			for nt in c: vals.append(f'{c[nt]:.4f}')
-			lines.append(' '.join(vals))
-		return '\n'.join(lines)
+
+	def prob(self, seq):
+		assert(self.length == len(seq))
+		# unfinished
 
 	def generate(self):
 		seq = ""
@@ -272,6 +422,19 @@ class PWM:
 			else:
 				seq += "T"
 		return seq
+
+	def string(self, probs=[]):
+		return pwm2string(self, probs=probs)
+
+	def pwm_file(self):
+		lines = []
+		lines.append(f'% PWM {self.name} {self.length}')
+		nts = 'ACGT'
+		for c in self.pwm:
+			vals = []
+			for nt in c: vals.append(f'{c[nt]:.4f}')
+			lines.append(' '.join(vals))
+		return '\n'.join(lines)
 
 	def svg(self):
 
@@ -331,6 +494,7 @@ class PWM:
 		svg.append('</svg>\n')
 
 		return '\n'.join(svg)
+
 
 #################################
 # Motif Generating Constructors #
@@ -467,7 +631,6 @@ def motif_distance(m1, m2, method='taxi'):
 				if (d < dist): 	dist = d
 	return dist
 
-
 def cmp_motifs(m1, m2, method='taxi'):
 
 	if   method == 'taxi':   dfunc = dl1
@@ -558,18 +721,65 @@ def align(m1, m2, gap=-2):
 # Motif Finding #
 #################
 
-def motifembedder(motif, motifprob, seqlen=50, seqnum=10):
-	for i in range(seqnum):
-		sequence = ""
-		record = []
-		for j in range(seqlen):
-			if random.random() < motifprob:
-				sequence += motif.generate() #generate function
-				record.append(j) # fix
-			else:
-				sequence += random.choice("acgt")
+def motifembedder(pwm, p, size, choice='ACGT', strand='='):
+	seq = ''
+	locs = []
+	while len(seq) < size:
+		if len(seq) > 0 and len(seq) < size - pwm.length and random.random() < p:
+			kmer = pwm.generate()
+			loc = len(seq)
+			if   strand == '=': s = random.choice('+-')
+			elif strand == '+': s = '+'
+			else:               s = '-'
 
-		yield sequence, record
+
+			if s == '+':
+				seq += kmer
+				locs.append(loc)
+			else:
+				seq += anti(kmer)
+				locs.append(-loc)
+		else:
+			seq += random.choice(choice)
+
+	return seq, locs
+
+"""
+A motif-finder
+	requires
+		seqs: a list of sequences of arbitrary length
+		bkgd: an n-th order background model
+		sfunc: scoring function
+		k: some length
+
+	options:
+		stranded
+		filtering heuristics (entropy, expectation)
+		threshold score?
+
+	returns
+		motifs with some minimum score?
+		best n motifs?
+
+Given a background model, what is the prob of
+	kmer: ACG
+	regex: A[S]G
+	dpwm: AcG
+	pwm: complete pwm
+	gpwm: gappable pwm
+
+
+"""
+
+def kmer_finder(seqs, k):
+	pass
+
+def regex_finder(seqs, k):
+	pass
+
+def dpwm_finder(seqs, k):
+	pass
+
 
 def motiffinder(seqs, k):
 	freqs = {}
@@ -584,7 +794,43 @@ def motiffinder(seqs, k):
 	for kmer in freqs:
 		print(kmer, freqs[kmer])
 
+<<<<<<< HEAD
 ###############################	
+=======
+#################
+# pHMM with PWM #
+#################
+file_gen = read_fasta(input)
+
+def states(file_gen):
+    # list of match states
+    bool_states = []
+    for line in file_gen:
+        temp = []
+        for i in line[1]:
+            if i != "-": temp.append(True)
+            else:temp.append(False)
+        bool_states.append(temp)
+    marked = []
+    for i in range(len(bool_states[0])):
+        count = 0
+        for j in range(len(bool_states)):
+            if bool_states[j][i] == True: count += 1
+        if count > 0.5*len(bool_states): marked.append("M")
+        else: marked.append("I")
+    states = []
+    for row in bool_states:
+        temp = []
+        for ind_col, col in enumerate(row):
+            if col == True and marked[ind_col] == "M": temp.append("M")
+            elif col == False and marked[ind_col] == "M": temp.append("D")
+            elif col == True and marked[ind_col] == "I": temp.append("I")
+            else: temp.append("-")
+        states.append(temp)
+    return states, marked
+
+################################
+>>>>>>> b531323bcc25ad85a9c36a4d8bd0a7f0f7317de7
 # Regular Expressions and PWMs #
 ################################
 
@@ -609,5 +855,27 @@ def regex2pwm(regex, name=None, source=None):
 		pwm.append(probs)
 	return PWM(pwm=pwm, name=name, source=source)
 
+NT2RE = {
+	'A': 'A',
+	'C': 'C',
+	'G': 'G',
+	'T': 'T',
+	'R': '[AG]',
+	'Y': '[CT]',
+	'M': '[AC]',
+	'K': '[GT]',
+	'W': '[AT]',
+	'S': '[CG]',
+	'B': '[CGT]',
+	'D': '[AGT]',
+	'H': '[ACT]',
+	'V': '[ACG]',
+	'N': '[ACGT]',
+}
+
 def pwm2regex(pwm):
-	pass
+	regex = ''
+	for letter in pwm2string(pwm):
+		if letter not in NT2RE: regex += '[ACGT]'
+		else:                   regex += NT2RE[letter]
+	return regex

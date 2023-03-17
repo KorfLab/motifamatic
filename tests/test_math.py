@@ -43,13 +43,17 @@ def test_dl1_sum():
 
 def test_entropy():
 	ps = [0.25, 0.25, 0.25, 0.25]
+<<<<<<< HEAD
 	qs = [1, 0, 0, 0]
 	assert(motiflib.entropy(ps) == 2)
 	assert(motiflib.entropy(qs) == 0)
+=======
+	assert(math.isclose(motiflib.entropy(ps), 2))
+>>>>>>> b531323bcc25ad85a9c36a4d8bd0a7f0f7317de7
 
 def test_dkl_ok():
 	ps = [0.2, 0.4, 0.1, 0.3]
-	qs = [0.2, 0.4, 0.1, 0.3] 
+	qs = [0.2, 0.4, 0.1, 0.3]
 	assert(math.isclose(motiflib.dkl(ps, qs), 0))
 
 def test_dkl_zeroes():
@@ -63,7 +67,7 @@ def test_dkl_empty():
 	qs = []
 	with pytest.raises(AssertionError):
 		motiflib.dkl(ps, qs)
-		
+
 def test_dkl_negative():
 	ps = [0.8, 0.1, 0.1]
 	qs = [0.2, -0.8, 0.8]
@@ -75,7 +79,7 @@ def test_dkl_sum():
 	qs = [0.1, 0.1, 0.1, 0.1]
 	with pytest.raises(AssertionError):
 		motiflib.dkl(ps, qs)
-	
+
 """
 entropy() has no tests: Claire
 dl2() has no tests: Meghana
