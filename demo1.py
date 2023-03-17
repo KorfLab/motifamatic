@@ -38,7 +38,7 @@ motif_model = {
 	'dpwm':  motiflib.dpwm_finder,
 }
 
-UNFINISHED THOUGHTS
+#UNFINISHED THOUGHTS
 
 seqs = [] # synthetic sequences
 locs = [] # locations of synthetic motifs in each sequence
@@ -47,6 +47,15 @@ for i in range(arg.n):
 	seqs.append(seq)
 	locs.append(loc) # not sure we're using these here
 
+tseq = ['AAAAAAAAAAAAAAAAACGT']
+
+mm = motiflib.MM(tseq, order=1)
+s = mm.generate(10, pre='')
+print(s, len(s), s.count('A'))
+print(mm.prob('AAA'))
+
+
+"""
 for mname in motif_model:
 	finder = motif_model[mname]
 	best_motifs = finder(seqs, pwm.length, bkgd, n=10)
@@ -54,7 +63,7 @@ for mname in motif_model:
 
 
 
-"""
+
 pwm model: kmer, regex, dpwm
 score model: nseqs, nmotifs
 """

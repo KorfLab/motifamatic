@@ -1,6 +1,7 @@
 import gzip
 import math
 import io
+import itertools
 import random
 import sys
 import re
@@ -94,6 +95,116 @@ def anti(seq):
 		elif nt == 'n': anti += 'n'
 		else: raise
 	return anti
+
+
+#######################
+# MM/Background Class #
+#######################
+
+class MM:
+	"""Class representing a Markov model of nucleotide probabilities."""
+
+	def __init__(self, seqs, order=0, pseudo=1.0, name=None):
+		"""
+		Initialization
+		--------------
+		+ seqs     `list`  a list of nt sequences (strings)
+		+ order    `int`   integer >= 0, default 0
+		+ name     `str`   optional name, default None
+		+ pseudo   `float` optional pseudocount, default 1.0
+
+		Attributes
+		----------
+		+ name     `str`
+		+ order    `int`
+		+ mm       `dict`  [context dict][nt dict]
+
+		Methods
+		-------
+		+ prob(seq)        probability of generating sequence
+		+ generate(len)    generate a sequence of some length
+		+ mm_file()        file representation
+		"""
+
+		self.name = name
+		self.order = order
+		self.mm = {}
+
+		# init
+		counts = {}
+		if order == 0:
+			counts = {'A':pseudo, 'C':pseudo, 'G':pseudo, 'T':pseudo}
+		else:
+			for nts in itertools.product('ACGT', repeat=order):
+				ctx = ''.join(nts)
+				counts[ctx] = {'A':pseudo, 'C':pseudo, 'G':pseudo, 'T':pseudo}
+
+		# add counts
+		for seq in seqs:
+			for i in range(order, len(seq) - order):
+				if order == 0:
+					nt = seq[i]
+					counts[nt] += 1
+				else:
+					ctx = seq[i-order:i]
+					nt = seq[i]
+					counts[ctx][nt] += 1
+
+		# assign frequencies
+		if order == 0:
+			total = sum(counts.values())
+			for nt in counts: self.mm[nt] = counts[nt] / total
+		else:
+			for ctx in counts:
+				total = sum(counts[ctx].values())
+				if total == 0:
+					raise Exception("not enough observations for context")
+				self.mm[ctx] = {}
+				for nt in counts[ctx]:
+					self.mm[ctx][nt] = counts[ctx][nt] / total
+
+	def prob(self, seq):
+		if self.order == 0:
+			p = 1.0
+			for nt in seq: p *= self.mm[nt]
+			return p
+
+		assert(len(seq) > self.order)
+		p = 1.0
+		for i in range(self.order, len(seq)):
+			ctx = seq[i-self.order:i]
+			nt = seq[i]
+			p *= self.mm[ctx][nt]
+		return p
+
+	def generate(self, n, pre='', marg=[0.25, 0.25, 0.25, 0.25]):
+		if self.order == 0:
+			s = ''
+			for i in range(n):
+				s += random.choices('ACGT', weights=self.mm.values())[0]
+			return s
+
+		s = pre
+		while len(s) < self.order:
+			s += random.choices('ACGT', weights=marg)[0]
+
+		for i in range(len(s), n):
+			ctx = s[i-self.order:i]
+			s += random.choices('ACGT', weights=self.mm[ctx].values())[0]
+		return s
+
+	def mm_file(self):
+		lines = []
+		lines.append(f'% MM {self.name} {4**(self.order+1)}')
+		if self.order == 0:
+			for nt in 'ACGT':
+				lines.append(f'{nt} {self.mm[nt]:.6f}')
+		else:
+			for ctx in self.mm:
+				for nt in 'ACGT':
+					lines.append(f'{ctx}{nt} {self.mm[ctx][nt]:.6f}')
+				lines.append('')
+		return '\n'.join(lines)
 
 
 ########################################
@@ -212,29 +323,36 @@ def read_fasta(input):
 	yield(name, ''.join(seqs))
 	fp.close()
 
-###############
-# Motif Class #
-###############
+###################
+# PWM/Motif Class #
+###################
 
 class PWM:
 	"""Class representing a nucleotide position weight matrix."""
 
 	def __init__(self, seqs=None, pwm=None, string=None, name=None, source=None):
 		"""
+		Initialization (choose one of the options below)
+		--------------
+		+ string   `str`   an optional motif-like string (e.g. ttNGATYTG)
+		+ seqs     `list`  an optional list of sequences (strings)
+		+ pwm      `list`  an optional list of dictionaries
+
 		Attributes
 		----------
-		+ name     `str`   object of type `sequence.DNA`
+		+ name     `str`   name, if given
 		+ source   `str`   origin of data, if known
 		+ pwm      `list`  a list of `dict` {ACGT}
 		+ length   `int`   length of PWM
 		+ entropy  `float` sum entropy (or actually 2-H)
 
-
-		Initialization
-		--------------
-		+ string   `str`   a motif-like string (e.g. ttNGATYTG)
-		+ seqs     `list`  a list of sequences (strings)
-		+ pwm      `list`  a list of dictionaries
+		Methods
+		-------
+		+ prob(seq)        probability of generating sequence
+		+ generate()       an exemplar sequence
+		+ string()         a string representation
+		+ pwm_file()       a PWM file representation
+		+ svg()            an SVG representation
 		"""
 
 		assert(seqs is not None or pwm is not None or string is not None)
@@ -287,18 +405,9 @@ class PWM:
 	def __str__(self, probs=[]):
 		return pwm2string(self, probs=probs)
 
-	def string(self, probs=[]):
-		return pwm2string(self, probs=probs)
-
-	def pwm_file(self):
-		lines = []
-		lines.append(f'% PWM {self.name} {self.length}')
-		nts = 'ACGT'
-		for c in self.pwm:
-			vals = []
-			for nt in c: vals.append(f'{c[nt]:.4f}')
-			lines.append(' '.join(vals))
-		return '\n'.join(lines)
+	def prob(self, seq):
+		assert(self.length == len(seq))
+		# unfinished
 
 	def generate(self):
 		seq = ""
@@ -313,6 +422,19 @@ class PWM:
 			else:
 				seq += "T"
 		return seq
+
+	def string(self, probs=[]):
+		return pwm2string(self, probs=probs)
+
+	def pwm_file(self):
+		lines = []
+		lines.append(f'% PWM {self.name} {self.length}')
+		nts = 'ACGT'
+		for c in self.pwm:
+			vals = []
+			for nt in c: vals.append(f'{c[nt]:.4f}')
+			lines.append(' '.join(vals))
+		return '\n'.join(lines)
 
 	def svg(self):
 
@@ -372,6 +494,7 @@ class PWM:
 		svg.append('</svg>\n')
 
 		return '\n'.join(svg)
+
 
 #################################
 # Motif Generating Constructors #
@@ -508,7 +631,6 @@ def motif_distance(m1, m2, method='taxi'):
 				if (d < dist): 	dist = d
 	return dist
 
-
 def cmp_motifs(m1, m2, method='taxi'):
 
 	if   method == 'taxi':   dfunc = dl1
@@ -599,7 +721,7 @@ def align(m1, m2, gap=-2):
 # Motif Finding #
 #################
 
-def motifembedder(pwm, p, size, choice='acgt', strand='='):
+def motifembedder(pwm, p, size, choice='ACGT', strand='='):
 	seq = ''
 	locs = []
 	while len(seq) < size:
@@ -623,12 +745,30 @@ def motifembedder(pwm, p, size, choice='acgt', strand='='):
 	return seq, locs
 
 """
-A motif-finder returns the top-n motifs given
-	seqs: a list of sequences of arbitrary length
-	k: length of motif
-	n: maximum number of best motifs
-	b: some background model (nth order MM)
-	s: some scoring model (uses distribution of counts in lists)
+A motif-finder
+	requires
+		seqs: a list of sequences of arbitrary length
+		bkgd: an n-th order background model
+		sfunc: scoring function
+		k: some length
+
+	options:
+		stranded
+		filtering heuristics (entropy, expectation)
+		threshold score?
+
+	returns
+		motifs with some minimum score?
+		best n motifs?
+
+Given a background model, what is the prob of
+	kmer: ACG
+	regex: A[S]G
+	dpwm: AcG
+	pwm: complete pwm
+	gpwm: gappable pwm
+
+
 """
 
 def kmer_finder(seqs, k):
@@ -710,7 +850,6 @@ def regex2pwm(regex, name=None, source=None):
 			probs[nt] = p
 		pwm.append(probs)
 	return PWM(pwm=pwm, name=name, source=source)
-
 
 NT2RE = {
 	'A': 'A',
