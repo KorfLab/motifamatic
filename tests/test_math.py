@@ -43,7 +43,9 @@ def test_dl1_sum():
 
 def test_entropy():
 	ps = [0.25, 0.25, 0.25, 0.25]
-	assert(motiflib.entropy(ps), 2)
+	qs = [1, 0, 0, 0]
+	assert(motiflib.entropy(ps) == 2)
+	assert(motiflib.entropy(qs) == 0)
 
 def test_dkl_ok():
 	ps = [0.2, 0.4, 0.1, 0.3]

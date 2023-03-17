@@ -584,38 +584,6 @@ def motiffinder(seqs, k):
 	for kmer in freqs:
 		print(kmer, freqs[kmer])
 
-#################
-# pHMM with PWM #
-#################
-file_gen = read_fasta(input)
-
-def states(file_gen):
-    # list of match states
-    bool_states = []
-    for line in file_gen:
-        temp = []
-        for i in line[1]:
-            if i != "-": temp.append(True)
-            else:temp.append(False)                
-        bool_states.append(temp)    
-    marked = []    
-    for i in range(len(bool_states[0])):
-        count = 0
-        for j in range(len(bool_states)):
-            if bool_states[j][i] == True: count += 1
-        if count > 0.5*len(bool_states): marked.append("M")            
-        else: marked.append("I")          
-    states = []
-    for row in bool_states:
-        temp = []
-        for ind_col, col in enumerate(row):
-            if col == True and marked[ind_col] == "M": temp.append("M")                
-            elif col == False and marked[ind_col] == "M": temp.append("D")                
-            elif col == True and marked[ind_col] == "I": temp.append("I")                
-            else: temp.append("-")                
-        states.append(temp)
-    return states, marked
-
 ###############################	
 # Regular Expressions and PWMs #
 ################################
