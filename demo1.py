@@ -30,29 +30,33 @@ if arg.r: random.seed(1)
 strand = '+'
 if arg.d: strand = '='
 
-pwm = motiflib.string2pwm(arg.m)
-
-motif_model = {
-	'kmer':  motiflib.kmer_finder,
-	'regex': motiflib.regex_finder,
-	'dpwm':  motiflib.dpwm_finder,
-}
+#pwm = motiflib.string2pwm(arg.m)
 
 #UNFINISHED THOUGHTS
 
-seqs = [] # synthetic sequences
-locs = [] # locations of synthetic motifs in each sequence
-for i in range(arg.n):
-	seq, loc = motiflib.motifembedder(pwm, arg.p, arg.s, strand=strand)
-	seqs.append(seq)
-	locs.append(loc) # not sure we're using these here
+#seqs = [] # synthetic sequences
+#locs = [] # locations of synthetic motifs in each sequence
+#for i in range(arg.n):
+#	seq, loc = motiflib.motifembedder(pwm, arg.p, arg.s, strand=strand)
+#	seqs.append(seq)
+#	locs.append(loc) # not sure we're using these here
 
-tseq = ['AAAAAAAAAAAAAAAAACGT']
+train = ['ACGT']
+bkgd = motiflib.MM(train, order=0)
+#print(bkgd.seq_prob('A'))
 
-mm = motiflib.MM(tseq, order=1)
-s = mm.generate(10, pre='')
-print(s, len(s), s.count('A'))
-print(mm.prob('AAA'))
+rm = motiflib.regex2pwm('A[AC]')
+print(rm.pwm_file())
+
+#sm = motiflib.string2pwm('N')
+#print(bkgd.pwm_prob(sm))
+
+#s = mm.generate(10, pre='')
+#print(s, len(s), s.count('A'))
+#print(mm.seq_prob('AAA'))
+#print(mm.re_prob('A[AT]A'))
+
+
 
 
 """

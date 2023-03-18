@@ -117,11 +117,13 @@ class MM:
 		----------
 		+ name     `str`
 		+ order    `int`
-		+ mm       `dict`  [context dict][nt dict]
+		+ mm       `dict`  [context dict][nt dict] or [dict] if order == 0
 
 		Methods
 		-------
-		+ prob(seq)        probability of generating sequence
+		+ seq_prob(seq)    probability of generating sequence
+		+ re_prob(re)      probability of generating regex
+		+ pwm_prob(pwm)    probability of generating pwm
 		+ generate(len)    generate a sequence of some length
 		+ mm_file()        file representation
 		"""
@@ -163,7 +165,7 @@ class MM:
 				for nt in counts[ctx]:
 					self.mm[ctx][nt] = counts[ctx][nt] / total
 
-	def prob(self, seq):
+	def seq_prob(self, seq):
 		if self.order == 0:
 			p = 1.0
 			for nt in seq: p *= self.mm[nt]
@@ -176,6 +178,12 @@ class MM:
 			nt = seq[i]
 			p *= self.mm[ctx][nt]
 		return p
+
+	def re_prob(self, string): # may require generating possibilities
+		pass
+
+	def pwm_prob(self, pwm): # probably requires a threshold
+		pass
 
 	def generate(self, n, pre='', marg=[0.25, 0.25, 0.25, 0.25]):
 		if self.order == 0:
@@ -794,9 +802,7 @@ def motiffinder(seqs, k):
 	for kmer in freqs:
 		print(kmer, freqs[kmer])
 
-<<<<<<< HEAD
-###############################	
-=======
+
 #################
 # pHMM with PWM #
 #################
@@ -830,11 +836,11 @@ def states(file_gen):
     return states, marked
 
 ################################
->>>>>>> b531323bcc25ad85a9c36a4d8bd0a7f0f7317de7
 # Regular Expressions and PWMs #
 ################################
 
 def regex2pwm(regex, name=None, source=None):
+	""" old implementation
 	pwm = []
 	positions = []
 	i = 0
@@ -853,6 +859,17 @@ def regex2pwm(regex, name=None, source=None):
 			p = 1 / len(pos)
 			probs[nt] = p
 		pwm.append(probs)
+	"""
+
+	pwm = []
+	pat = '([ACGT])|\[([ACGT]+)\]'
+	for m in re.finditer(pat, regex):
+		prob = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
+		if   m.group(1): nts = m.group(1)
+		elif m.group(2): nts = m.group(2)
+		else: raise Exception("unexpected letter or pattern")
+		for nt in nts: prob[nt] = 1/len(nts)
+		pwm.append(prob)
 	return PWM(pwm=pwm, name=name, source=source)
 
 NT2RE = {
