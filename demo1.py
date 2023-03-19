@@ -1,7 +1,8 @@
 import argparse
 import random
-import motiflib
+import sys
 
+import motiflib
 
 #######
 # CLI #
@@ -49,18 +50,18 @@ for i in range(arg.n):
 ###########################
 # Create background model #
 ###########################
-bkgd = motiflib.MM(seqs, order=0)
-print(bkgd.mm_file())
+bkg0 = motiflib.MM(seqs, order=0)
+print(bkg0.mm_file())
 
 ##########################
 # Find kmer-based motifs #
 ##########################
-found = motiflib.kmer_finder(seqs, bkgd, motiflib.anr, len(arg.m))
+found = motiflib.kmer_finder(seqs, bkg0, motiflib.anr, len(arg.m))
 print(found)
 
 ###########################
 # Find regex-based motifs #
 ###########################
-found = motiflib.regex_finder(seqs, bkgd, motiflib.anr, len(arg.m))
+found = motiflib.regex_finder(seqs, bkg0, motiflib.anr, len(arg.m))
 print(found)
 

@@ -179,7 +179,8 @@ class MM:
 			p *= self.mm[ctx][nt]
 		return p
 
-	def re_prob(self, regex): # may require generating possibilities
+	def re_prob(self, regex):
+		# there must be a more efficient way to do this
 
 		# create all the sequences from the regex
 		seqs = ['']
@@ -194,14 +195,25 @@ class MM:
 					newseqs.append(seq + nt)
 			seqs = newseqs
 
-		# score all of the sequences
+		# sum the expected sequence probabilities
 		p = 0.0
 		for seq in seqs: p += self.seq_prob(seq)
 
 		return p
 
-	def pwm_prob(self, pwm): # probably requires a threshold
-		pass
+	def pwm_prob(self, pwm, x=0.5):
+		# this is brute force, there must be a better way
+
+		threshold = x ** pwm.length
+		n = 0
+		for nts in itertools.product('ACGT', repeat=pwm.length):
+			seq = ''.join(nts)
+			p = pwm.prob(seq)
+		#	q = self.seq_prob(seq)
+		#	print(seq, p, q)
+			if p > threshold: n += 1
+
+		return n / 4 ** pwm.length
 
 	def generate(self, n, pre='', marg=[0.25, 0.25, 0.25, 0.25]):
 		if self.order == 0:
@@ -433,7 +445,10 @@ class PWM:
 
 	def prob(self, seq):
 		assert(self.length == len(seq))
-		# unfinished
+		p = 1.0
+		for i, nt in enumerate(seq):
+			p *= self.pwm[i][nt]
+		return p
 
 	def generate(self):
 		seq = ""
@@ -886,10 +901,10 @@ XNT = {
 	'N': 1.00,
 }
 
-def regex_finder(seqs, bkgd, func, k, n=10, x=0.35):
+def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN'):
 
 	keep = []
-	for t in itertools.product('ACGTRYMKWSN', repeat=k):
+	for t in itertools.product(alph, repeat=k):
 		s = ''.join(t)
 		p = 1.0
 		for letter in s: p *= XNT[letter]
@@ -917,7 +932,7 @@ def regex_finder(seqs, bkgd, func, k, n=10, x=0.35):
 	keep = sorted(keep, key=lambda t: t[1], reverse=True)
 	return keep[:n]
 
-def dpwm_finder(seqs, k):
+def dpwm_finder(seqs, bkgd, func, k, n=10, alph='ACGTRYMKWSN'):
 	pass
 
 
