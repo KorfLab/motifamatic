@@ -179,8 +179,26 @@ class MM:
 			p *= self.mm[ctx][nt]
 		return p
 
-	def re_prob(self, string): # may require generating possibilities
-		pass
+	def re_prob(self, regex): # may require generating possibilities
+
+		# create all the sequences from the regex
+		seqs = ['']
+		pat = '([ACGT])|\[([ACGT]+)\]'
+		for m in re.finditer(pat, regex):
+			if   m.group(1): nts = m.group(1)
+			elif m.group(2): nts = m.group(2)
+			else: raise Exception("unexpected letter or pattern")
+			newseqs = []
+			for seq in seqs:
+				for nt in nts:
+					newseqs.append(seq + nt)
+			seqs = newseqs
+
+		# score all of the sequences
+		p = 0.0
+		for seq in seqs: p += self.seq_prob(seq)
+
+		return p
 
 	def pwm_prob(self, pwm): # probably requires a threshold
 		pass
@@ -753,6 +771,43 @@ def motifembedder(pwm, p, size, choice='ACGT', strand='='):
 	return seq, locs
 
 """
+
+A scoring function
+	requires
+		seqs: sequences in case it needs lengths
+		locations: where on each sequence the motif is found
+		exp: expected probability of motif (given pwm and bkgd model)
+
+	returns
+		score
+
+
+"""
+
+def zoops(seqs, locs, exp):
+	n = 0
+	x = 0
+	for seq, loc in zip(seqs, locs):
+		if len(loc) > 0: n += 1
+		x += exp * len(seq)
+
+	if n == 0: return 0 # really?
+
+	return math.log2(n / x)
+
+
+def anr(seqs, locs, exp):
+	n = 0
+	x = 0
+	for seq, loc in zip(seqs, locs):
+		n += len(loc)
+		x += exp * len(seq)
+
+	if n == 0: return 0 # really?
+
+	return math.log2(n / x)
+
+"""
 A motif-finder
 	requires
 		seqs: a list of sequences of arbitrary length
@@ -779,11 +834,88 @@ Given a background model, what is the prob of
 
 """
 
-def kmer_finder(seqs, k):
-	pass
+def kmer_finder(seqs, bkgd, func, k, n=10):
 
-def regex_finder(seqs, k):
-	pass
+	# get all of the kmers present (rather than all possible)
+	kmers = {}
+	for seq in seqs:
+		for i in range(len(seq) -k +1):
+			kmers[ seq[i:i+k] ] = True
+
+	# calculate scores of all kmers, and keep the good ones
+	keep = []
+	for kmer in kmers:
+		locs = []
+		for seq in seqs:
+			pos = []
+			off = 0
+			while True:
+				idx = seq.find(kmer, off)
+				if idx == -1: break
+				pos.append(idx)
+				off = idx + len(kmer)
+			locs.append(pos)
+
+		score = func(seqs, locs, bkgd.seq_prob(kmer))
+		keep.append( (kmer, score) )
+
+		# prevent the list from growing too much
+		if len(keep) > 1000:
+			keep = sorted(keep, key=lambda t: t[1], reverse=True)
+			keep = keep[:n]
+
+	# final sort-n-trim
+	keep = sorted(keep, key=lambda t: t[1], reverse=True)
+	return keep[:n]
+
+XNT = {
+	'A': 0.25,
+	'C': 0.25,
+	'G': 0.25,
+	'T': 0.25,
+	'R': 0.50,
+	'Y': 0.50,
+	'M': 0.50,
+	'K': 0.50,
+	'W': 0.50,
+	'S': 0.50,
+	'B': 0.75,
+	'D': 0.75,
+	'H': 0.75,
+	'V': 0.75,
+	'N': 1.00,
+}
+
+def regex_finder(seqs, bkgd, func, k, n=10, x=0.35):
+
+	keep = []
+	for t in itertools.product('ACGTRYMKWSN', repeat=k):
+		s = ''.join(t)
+		p = 1.0
+		for letter in s: p *= XNT[letter]
+		if p > x ** len(s): continue
+
+		regex = ''
+		for letter in t: regex += NT2RE[letter]
+
+		locs = []
+		for seq in seqs:
+			pos = []
+			for m in re.finditer(regex, seq):
+				pos.append(m.span()[0])
+			locs.append(pos)
+
+		score = func(seqs, locs, bkgd.re_prob(regex))
+		keep.append( (regex, score) )
+
+		# prevent the list from growing too much
+		if len(keep) > 1000:
+			keep = sorted(keep, key=lambda t: t[1], reverse=True)
+			keep = keep[:n]
+
+	# final sort-n-trim
+	keep = sorted(keep, key=lambda t: t[1], reverse=True)
+	return keep[:n]
 
 def dpwm_finder(seqs, k):
 	pass
