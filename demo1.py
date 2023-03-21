@@ -2,7 +2,9 @@ import argparse
 import random
 import sys
 
-import motiflib
+import pwm
+import mm
+import motif_finder
 
 #######
 # CLI #
@@ -34,7 +36,7 @@ if arg.d: strand = '='
 ################
 # Create a PWM #
 ################
-pwm = motiflib.string2pwm(arg.m)
+pwm = pwm.string2pwm(arg.m)
 print(pwm.pwm_file())
 
 #######################
@@ -43,25 +45,25 @@ print(pwm.pwm_file())
 seqs = [] # synthetic sequences
 locs = [] # locations of synthetic motifs in each sequence (not used yet)
 for i in range(arg.n):
-	seq, loc = motiflib.motifembedder(pwm, arg.p, arg.s, strand=strand)
+	seq, loc = motif_finder.motifembedder(pwm, arg.p, arg.s, strand=strand)
 	seqs.append(seq)
 	locs.append(loc)
 
 ###########################
 # Create background model #
 ###########################
-bkg0 = motiflib.MM(seqs, order=0)
+bkg0 = mm.MM(seqs, order=0)
 print(bkg0.mm_file())
 
 ##########################
 # Find kmer-based motifs #
 ##########################
-found = motiflib.kmer_finder(seqs, bkg0, motiflib.anr, len(arg.m))
+found = motif_finder.kmer_finder(seqs, bkg0, motif_finder.anr, len(arg.m))
 print(found)
 
 ###########################
 # Find regex-based motifs #
 ###########################
-found = motiflib.regex_finder(seqs, bkg0, motiflib.anr, len(arg.m))
+found = motif_finder.regex_finder(seqs, bkg0, motif_finder.anr, len(arg.m))
 print(found)
 
