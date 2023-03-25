@@ -117,11 +117,13 @@ class MM:
 		----------
 		+ name     `str`
 		+ order    `int`
-		+ mm       `dict`  [context dict][nt dict]
+		+ mm       `dict`  [context dict][nt dict] or [dict] if order == 0
 
 		Methods
 		-------
-		+ prob(seq)        probability of generating sequence
+		+ seq_prob(seq)    probability of generating sequence
+		+ re_prob(re)      probability of generating regex
+		+ pwm_prob(pwm)    probability of generating pwm
 		+ generate(len)    generate a sequence of some length
 		+ mm_file()        file representation
 		"""
@@ -163,7 +165,7 @@ class MM:
 				for nt in counts[ctx]:
 					self.mm[ctx][nt] = counts[ctx][nt] / total
 
-	def prob(self, seq):
+	def seq_prob(self, seq):
 		if self.order == 0:
 			p = 1.0
 			for nt in seq: p *= self.mm[nt]
@@ -176,6 +178,42 @@ class MM:
 			nt = seq[i]
 			p *= self.mm[ctx][nt]
 		return p
+
+	def re_prob(self, regex):
+		# there must be a more efficient way to do this
+
+		# create all the sequences from the regex
+		seqs = ['']
+		pat = '([ACGT])|\[([ACGT]+)\]'
+		for m in re.finditer(pat, regex):
+			if   m.group(1): nts = m.group(1)
+			elif m.group(2): nts = m.group(2)
+			else: raise Exception("unexpected letter or pattern")
+			newseqs = []
+			for seq in seqs:
+				for nt in nts:
+					newseqs.append(seq + nt)
+			seqs = newseqs
+
+		# sum the expected sequence probabilities
+		p = 0.0
+		for seq in seqs: p += self.seq_prob(seq)
+
+		return p
+
+	def pwm_prob(self, pwm, x=0.5):
+		# this is brute force, there must be a better way
+
+		threshold = x ** pwm.length
+		n = 0
+		for nts in itertools.product('ACGT', repeat=pwm.length):
+			seq = ''.join(nts)
+			p = pwm.prob(seq)
+		#	q = self.seq_prob(seq)
+		#	print(seq, p, q)
+			if p > threshold: n += 1
+
+		return n / 4 ** pwm.length
 
 	def generate(self, n, pre='', marg=[0.25, 0.25, 0.25, 0.25]):
 		if self.order == 0:
@@ -407,7 +445,10 @@ class PWM:
 
 	def prob(self, seq):
 		assert(self.length == len(seq))
-		# unfinished
+		p = 1.0
+		for i, nt in enumerate(seq):
+			p *= self.pwm[i][nt]
+		return p
 
 	def generate(self):
 		seq = ""
@@ -745,6 +786,43 @@ def motifembedder(pwm, p, size, choice='ACGT', strand='='):
 	return seq, locs
 
 """
+
+A scoring function
+	requires
+		seqs: sequences in case it needs lengths
+		locations: where on each sequence the motif is found
+		exp: expected probability of motif (given pwm and bkgd model)
+
+	returns
+		score
+
+
+"""
+
+def zoops(seqs, locs, exp):
+	n = 0
+	x = 0
+	for seq, loc in zip(seqs, locs):
+		if len(loc) > 0: n += 1
+		x += exp * len(seq)
+
+	if n == 0: return 0 # really?
+
+	return math.log2(n / x)
+
+
+def anr(seqs, locs, exp):
+	n = 0
+	x = 0
+	for seq, loc in zip(seqs, locs):
+		n += len(loc)
+		x += exp * len(seq)
+
+	if n == 0: return 0 # really?
+
+	return math.log2(n / x)
+
+"""
 A motif-finder
 	requires
 		seqs: a list of sequences of arbitrary length
@@ -771,13 +849,90 @@ Given a background model, what is the prob of
 
 """
 
-def kmer_finder(seqs, k):
-	pass
+def kmer_finder(seqs, bkgd, func, k, n=10):
 
-def regex_finder(seqs, k):
-	pass
+	# get all of the kmers present (rather than all possible)
+	kmers = {}
+	for seq in seqs:
+		for i in range(len(seq) -k +1):
+			kmers[ seq[i:i+k] ] = True
 
-def dpwm_finder(seqs, k):
+	# calculate scores of all kmers, and keep the good ones
+	keep = []
+	for kmer in kmers:
+		locs = []
+		for seq in seqs:
+			pos = []
+			off = 0
+			while True:
+				idx = seq.find(kmer, off)
+				if idx == -1: break
+				pos.append(idx)
+				off = idx + len(kmer)
+			locs.append(pos)
+
+		score = func(seqs, locs, bkgd.seq_prob(kmer))
+		keep.append( (kmer, score) )
+
+		# prevent the list from growing too much
+		if len(keep) > 1000:
+			keep = sorted(keep, key=lambda t: t[1], reverse=True)
+			keep = keep[:n]
+
+	# final sort-n-trim
+	keep = sorted(keep, key=lambda t: t[1], reverse=True)
+	return keep[:n]
+
+XNT = {
+	'A': 0.25,
+	'C': 0.25,
+	'G': 0.25,
+	'T': 0.25,
+	'R': 0.50,
+	'Y': 0.50,
+	'M': 0.50,
+	'K': 0.50,
+	'W': 0.50,
+	'S': 0.50,
+	'B': 0.75,
+	'D': 0.75,
+	'H': 0.75,
+	'V': 0.75,
+	'N': 1.00,
+}
+
+def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN'):
+
+	keep = []
+	for t in itertools.product(alph, repeat=k):
+		s = ''.join(t)
+		p = 1.0
+		for letter in s: p *= XNT[letter]
+		if p > x ** len(s): continue
+
+		regex = ''
+		for letter in t: regex += NT2RE[letter]
+
+		locs = []
+		for seq in seqs:
+			pos = []
+			for m in re.finditer(regex, seq):
+				pos.append(m.span()[0])
+			locs.append(pos)
+
+		score = func(seqs, locs, bkgd.re_prob(regex))
+		keep.append( (regex, score) )
+
+		# prevent the list from growing too much
+		if len(keep) > 1000:
+			keep = sorted(keep, key=lambda t: t[1], reverse=True)
+			keep = keep[:n]
+
+	# final sort-n-trim
+	keep = sorted(keep, key=lambda t: t[1], reverse=True)
+	return keep[:n]
+
+def dpwm_finder(seqs, bkgd, func, k, n=10, alph='ACGTRYMKWSN'):
 	pass
 
 
@@ -794,9 +949,7 @@ def motiffinder(seqs, k):
 	for kmer in freqs:
 		print(kmer, freqs[kmer])
 
-<<<<<<< HEAD
-###############################	
-=======
+
 #################
 # pHMM with PWM #
 #################
@@ -830,11 +983,11 @@ def states(file_gen):
     return states, marked
 
 ################################
->>>>>>> b531323bcc25ad85a9c36a4d8bd0a7f0f7317de7
 # Regular Expressions and PWMs #
 ################################
 
 def regex2pwm(regex, name=None, source=None):
+	""" old implementation
 	pwm = []
 	positions = []
 	i = 0
@@ -853,6 +1006,17 @@ def regex2pwm(regex, name=None, source=None):
 			p = 1 / len(pos)
 			probs[nt] = p
 		pwm.append(probs)
+	"""
+
+	pwm = []
+	pat = '([ACGT])|\[([ACGT]+)\]'
+	for m in re.finditer(pat, regex):
+		prob = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
+		if   m.group(1): nts = m.group(1)
+		elif m.group(2): nts = m.group(2)
+		else: raise Exception("unexpected letter or pattern")
+		for nt in nts: prob[nt] = 1/len(nts)
+		pwm.append(prob)
 	return PWM(pwm=pwm, name=name, source=source)
 
 NT2RE = {
