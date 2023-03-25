@@ -1,10 +1,7 @@
-import gzip
 import math
-import io
-import itertools
 import random
-import sys
 import re
+import tools
 
 ##################
 # Math Utilities #
@@ -417,7 +414,7 @@ class PWM:
 
 		self.length = len(self.pwm)
 		self.entropy = 0
-		for c in self.pwm: self.entropy += entropy(c.values())
+		for c in self.pwm: self.entropy += tools.entropy(c.values())
 
 	def _from_seqs(self, seqs):
 		count = []
@@ -513,7 +510,7 @@ class PWM:
 
 		# letters
 		for i, col in enumerate(self.pwm):
-			ys = 2- entropy(col)
+			ys = 2- tools.entropy(col)
 			if ys == 0: continue
 			yoff = 0
 			xoff = i * 46 + 30
@@ -535,7 +532,6 @@ class PWM:
 		svg.append('</svg>\n')
 
 		return '\n'.join(svg)
-
 
 #################################
 # Motif Generating Constructors #
@@ -758,32 +754,54 @@ def align(m1, m2, gap=-2):
     print(f'Score: {totalscore}')
     pass
 
-#################
-# Motif Finding #
-#################
+################################
+# Regular Expressions and PWMs #
+################################
 
-def motifembedder(pwm, p, size, choice='ACGT', strand='='):
-	seq = ''
-	locs = []
-	while len(seq) < size:
-		if len(seq) > 0 and len(seq) < size - pwm.length and random.random() < p:
-			kmer = pwm.generate()
-			loc = len(seq)
-			if   strand == '=': s = random.choice('+-')
-			elif strand == '+': s = '+'
-			else:               s = '-'
+def regex2pwm(regex, name=None, source=None):
+	""" old implementation
+	pwm = []
+	positions = []
+	i = 0
+	while (i < len(regex)):
+		if (regex[i] == '['):
+			x = re.search(']', regex[i:]).start() + i
+			positions.append(regex[i+1:x])
+			i = x
+		elif (regex[i] != '[' and regex[i] != ']'):
+			positions.append(regex[i])
+		i += 1
+	for pos in positions:
+		probs = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
+		for nt in pos:
+			if nt not in probs: raise ValueError(f'letter {nt} not allowed')
+			p = 1 / len(pos)
+			probs[nt] = p
+		pwm.append(probs)
+	"""
+
+	pwm = []
+	pat = '([ACGT])|\[([ACGT]+)\]'
+	for m in re.finditer(pat, regex):
+		prob = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
+		if   m.group(1): nts = m.group(1)
+		elif m.group(2): nts = m.group(2)
+		else: raise Exception("unexpected letter or pattern")
+		for nt in nts: prob[nt] = 1/len(nts)
+		pwm.append(prob)
+	return PWM(pwm=pwm, name=name, source=source)
 
 
-			if s == '+':
-				seq += kmer
-				locs.append(loc)
-			else:
-				seq += anti(kmer)
-				locs.append(-loc)
-		else:
-			seq += random.choice(choice)
+def pwm2regex(pwm):
+	regex = ''
+	for letter in pwm2string(pwm):
+		if letter not in tools.NT2RE: regex += '[ACGT]'
+		else:                   regex += tools.NT2RE[letter]
+	return regex
 
-	return seq, locs
+########################################
+# Discretized Nucleotide Probabilities #
+########################################
 
 """
 
@@ -830,24 +848,65 @@ A motif-finder
 		sfunc: scoring function
 		k: some length
 
-	options:
-		stranded
-		filtering heuristics (entropy, expectation)
-		threshold score?
+	return {
+		'A': {'A': c1, 'C': d1, 'G': d1, 'T': d1},
+		'C': {'A': d1, 'C': c1, 'G': d1, 'T': d1},
+		'G': {'A': d1, 'C': d1, 'G': c1, 'T': d1},
+		'T': {'A': d1, 'C': d1, 'G': d1, 'T': c1},
+		'R': {'A': c2, 'C': d2, 'G': c2, 'T': d2},
+		'Y': {'A': d2, 'C': c2, 'G': d2, 'T': c2},
+		'M': {'A': c2, 'C': c2, 'G': d2, 'T': d2},
+		'K': {'A': d2, 'C': d2, 'G': c2, 'T': c2},
+		'W': {'A': c2, 'C': d2, 'G': d2, 'T': c2},
+		'S': {'A': d2, 'C': c2, 'G': c2, 'T': d2},
+		'B': {'A': d3, 'C': c3, 'G': c3, 'T': c3},
+		'D': {'A': c3, 'C': d3, 'G': c3, 'T': c3},
+		'H': {'A': c3, 'C': c3, 'G': d3, 'T': c3},
+		'V': {'A': c3, 'C': c3, 'G': c3, 'T': d3},
+		'a': {'A': l1, 'C': m1, 'G': m1, 'T': m1},
+		'c': {'A': m1, 'C': l1, 'G': m1, 'T': m1},
+		'g': {'A': m1, 'C': m1, 'G': l1, 'T': m1},
+		't': {'A': m1, 'C': m1, 'G': m1, 'T': l1},
+		'r': {'A': l2, 'C': m2, 'G': l2, 'T': m2},
+		'y': {'A': m2, 'C': l2, 'G': m2, 'T': l2},
+		'm': {'A': l2, 'C': l2, 'G': m2, 'T': m2},
+		'k': {'A': m2, 'C': m2, 'G': l2, 'T': l2},
+		'w': {'A': l2, 'C': m2, 'G': m2, 'T': l2},
+		's': {'A': m2, 'C': l2, 'G': l2, 'T': m2},
+		'b': {'A': m3, 'C': l3, 'G': l3, 'T': l3},
+		'd': {'A': l3, 'C': m3, 'G': l3, 'T': l3},
+		'h': {'A': l3, 'C': l3, 'G': m3, 'T': l3},
+		'v': {'A': l3, 'C': l3, 'G': l3, 'T': m3},
+		'N': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+		'n': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+	}
 
-	returns
-		motifs with some minimum score?
-		best n motifs?
+def string2pwm(string, probs=[], name=None, source=None):
+	if   len(probs) == 6:  t = dnp_table(probs)
+	elif len(probs) == 0:  t = dnp_table()
+	else: raise ValueError('requires 6 arguments')
 
-Given a background model, what is the prob of
-	kmer: ACG
-	regex: A[S]G
-	dpwm: AcG
-	pwm: complete pwm
-	gpwm: gappable pwm
+	pwm = []
+	for nt in string:
+		if nt not in t: raise ValueError(f'letter {nt} not allowed')
+		pwm.append(t[nt])
+	return PWM(pwm=pwm, name=name, source=source)
 
+def pwm2string(pwm, probs=[]):
+	if   len(probs) == 6:  t = dnp_table(probs)
+	elif len(probs) == 0:  t = dnp_table()
+	else: raise ValueError('requires 6 arguments')
 
-"""
+	s = ''
+	for c in pwm.pwm:
+		dmin = None
+		best = None
+		for nt in t:
+			d = dl1(c.values(), t[nt].values())
+			if dmin is None or d < dmin:
+				dmin = d
+				best = nt
+		s += best
 
 def kmer_finder(seqs, bkgd, func, k, n=10):
 
@@ -953,7 +1012,7 @@ def motiffinder(seqs, k):
 #################
 # pHMM with PWM #
 #################
-file_gen = read_fasta(input)
+file_gen = tools.read_fasta(input)
 
 def states(file_gen):
     # list of match states

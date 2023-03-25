@@ -1,7 +1,10 @@
 import argparse
 import random
-import motiflib
+import sys
 
+import pwm
+import mm
+import motif_finder
 
 #######
 # CLI #
@@ -14,7 +17,7 @@ parser.add_argument('-n', type=int, metavar='<int>', required=False,
 parser.add_argument('-s', type=int, metavar='<n>', required=False,
 	default=60, help = 'size of sequences [%(default)i]')
 parser.add_argument('-p', type=float, metavar='<float>', required=False,
-	default=0.02, help = 'probability of motif [%(default).2f]')
+	default=0.03, help = 'probability of motif [%(default).2f]')
 parser.add_argument('-m', type=str, metavar='<motif>', required=False,
 	default='AASTT', help = 'string representation of motif [%(default)s]')
 parser.add_argument('-d', action='store_true', help='double-stranded')
@@ -30,41 +33,37 @@ if arg.r: random.seed(1)
 strand = '+'
 if arg.d: strand = '='
 
-pwm = motiflib.string2pwm(arg.m)
+################
+# Create a PWM #
+################
+pwm = pwm.string2pwm(arg.m)
+print(pwm.pwm_file())
 
-motif_model = {
-	'kmer':  motiflib.kmer_finder,
-	'regex': motiflib.regex_finder,
-	'dpwm':  motiflib.dpwm_finder,
-}
-
-#UNFINISHED THOUGHTS
-
+#######################
+# Create training set #
+#######################
 seqs = [] # synthetic sequences
-locs = [] # locations of synthetic motifs in each sequence
+locs = [] # locations of synthetic motifs in each sequence (not used yet)
 for i in range(arg.n):
-	seq, loc = motiflib.motifembedder(pwm, arg.p, arg.s, strand=strand)
+	seq, loc = motif_finder.motifembedder(pwm, arg.p, arg.s, strand=strand)
 	seqs.append(seq)
-	locs.append(loc) # not sure we're using these here
+	locs.append(loc)
 
-tseq = ['AAAAAAAAAAAAAAAAACGT']
+###########################
+# Create background model #
+###########################
+bkg0 = mm.MM(seqs, order=0)
+print(bkg0.mm_file())
 
-mm = motiflib.MM(tseq, order=1)
-s = mm.generate(10, pre='')
-print(s, len(s), s.count('A'))
-print(mm.prob('AAA'))
+##########################
+# Find kmer-based motifs #
+##########################
+found = motif_finder.kmer_finder(seqs, bkg0, motif_finder.anr, len(arg.m))
+print(found)
 
-
-"""
-for mname in motif_model:
-	finder = motif_model[mname]
-	best_motifs = finder(seqs, pwm.length, bkgd, n=10)
-	for motif in best_motifs:
-
-
-
-
-pwm model: kmer, regex, dpwm
-score model: nseqs, nmotifs
-"""
+###########################
+# Find regex-based motifs #
+###########################
+found = motif_finder.regex_finder(seqs, bkg0, motif_finder.anr, len(arg.m))
+print(found)
 
