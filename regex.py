@@ -1,6 +1,7 @@
-import motiflib
+import pwm
 import re 
 import itertools
+import motif_finder
 
 string2re = {
 	'A': 'A',
@@ -22,19 +23,19 @@ string2re = {
 
 def pwm2regex(pwm):
 	regex = ''
-	for letter in motiflib.pwm2string(pwm):
+	for letter in pwm.pwm2string(pwm):
 		if letter not in string2re: regex += '[ACGT]'
 		else: 						regex += string2re[letter]
 	return regex
 
-pwm = motiflib.string2pwm('ACRTT')
+pwm = pwm.string2pwm('ACRTT')
 #print(pwm.pwm_file())
 #print(pwm.string())
 #print(pwm)
 
 #print(pwm2regex(pwm))
 
-seqs = [seq for seq in motiflib.motifembedder(pwm, 0.05)]
+seqs = [seq for seq in motif_finder.motifembedder(pwm, 0.05)]
 #print(seqs)
 # expected probabilities:
 exp = {

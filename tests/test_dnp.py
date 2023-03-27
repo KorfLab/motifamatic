@@ -2,7 +2,7 @@ import math
 import pytest
 import sys
 
-import motiflib
+import pwm
 
 myprobs = [0.97, 0.49, 0.33, 0.70, 0.40, 0.30]
 

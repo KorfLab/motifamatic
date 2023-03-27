@@ -1,17 +1,16 @@
 import math
 import pytest
-
-import motiflib
+import pwm
 
 def test_random_motif():
-	m = motiflib.random_motif(5, name='random', source='random')
+	m = pwm.random_motif(5, name='random', source='random')
 	assert(m.name == 'random')
 	assert(m.source == 'random')
 	assert(m.length == 5)
 
 def test_from_seqs():
 	seqs = [seq for name, seq in motiflib.read_fasta('tests/example.fasta')]
-	m = motiflib.PWM(seqs=seqs)
+	m = pwm.PWM(seqs=seqs)
 	assert(math.isclose(m.pwm[0]['A'], 1.0))
 	assert(math.isclose(m.pwm[1]['A'], 0.25))
 
@@ -26,4 +25,4 @@ def test_from_pwm():
 
 def test_error_from_nothing():
 	with pytest.raises(AssertionError):
-		m = motiflib.PWM()
+		m = pwm.PWM()

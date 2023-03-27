@@ -991,9 +991,10 @@ def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN'):
 	keep = sorted(keep, key=lambda t: t[1], reverse=True)
 	return keep[:n]
 
+	pass
+	
 def dpwm_finder(seqs, bkgd, func, k, n=10, alph='ACGTRYMKWSN'):
 	pass
-
 
 def motiffinder(seqs, k):
 	freqs = {}
@@ -1046,7 +1047,7 @@ def states(file_gen):
 ################################
 
 def regex2pwm(regex, name=None, source=None):
-	""" old implementation
+	 old implementation
 	pwm = []
 	positions = []
 	i = 0
@@ -1065,7 +1066,7 @@ def regex2pwm(regex, name=None, source=None):
 			p = 1 / len(pos)
 			probs[nt] = p
 		pwm.append(probs)
-	"""
+	
 
 	pwm = []
 	pat = '([ACGT])|\[([ACGT]+)\]'
@@ -1077,7 +1078,7 @@ def regex2pwm(regex, name=None, source=None):
 		for nt in nts: prob[nt] = 1/len(nts)
 		pwm.append(prob)
 	return PWM(pwm=pwm, name=name, source=source)
-
+"""
 NT2RE = {
 	'A': 'A',
 	'C': 'C',

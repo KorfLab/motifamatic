@@ -1,10 +1,11 @@
-import motiflib
 import pytest
 import math
+import regex
+
 
 def test_regex2pwm_ok():
 	motif = '[ACGT]A'
-	a = motiflib.regex2pwm(motif)
+	a = regex.regex2pwm(motif)
 	assert(math.isclose(a.pwm[0]['A'], 0.25))
 	assert(math.isclose(a.pwm[0]['C'], 0.25))
 	assert(math.isclose(a.pwm[0]['G'], 0.25))
@@ -17,4 +18,4 @@ def test_regex2pwm_ok():
 def test_regex2pwm_invalid_nt():
 	motif = 'BA[CG]'
 	with pytest.raises(ValueError):
-		motiflib.regex2pwm(motif)
+		regex.regex2pwm(motif)
