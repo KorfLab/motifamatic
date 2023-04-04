@@ -1,6 +1,5 @@
 import gzip
 import math
-#import io
 import itertools
 import random
 import sys
@@ -29,7 +28,7 @@ def motifembedder(pwm, p, size, choice='ACGT', strand='='):
 				seq += kmer
 				locs.append(loc)
 			else:
-				seq += anti(kmer)
+				seq += tools.anti(kmer)
 				locs.append(-loc)
 		else:
 			seq += random.choice(choice)

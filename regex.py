@@ -35,8 +35,8 @@ pwm = pwm.string2pwm('ACRTT')
 
 #print(pwm2regex(pwm))
 
-seqs = [seq for seq in motif_finder.motifembedder(pwm, 0.05)]
-#print(seqs)
+seqs = [seq for seq in motif_finder.motifembedder(pwm, 0.05, 50)]
+print(seqs)
 # expected probabilities:
 exp = {
 	'A': 0.25,

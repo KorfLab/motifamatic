@@ -1,14 +1,13 @@
 import math
 import pytest
 import sys
-
 import pwm
 
 myprobs = [0.97, 0.49, 0.33, 0.70, 0.40, 0.30]
 
 def test_string2pwm():
 
-	m = motiflib.string2pwm('ACGTRYMKWSBDHVNacgtrymkwsbdhvn', probs=myprobs)
+	m = pwm.string2pwm('ACGTRYMKWSBDHVNacgtrymkwsbdhvn', probs=myprobs)
 	assert(math.isclose(m.pwm[0]['A'], 0.97))
 	assert(math.isclose(m.pwm[1]['A'], 0.01))
 	assert(math.isclose(m.pwm[2]['A'], 0.01))
@@ -41,7 +40,7 @@ def test_string2pwm():
 	assert(math.isclose(m.pwm[29]['A'], 0.25))
 
 def test_pwm2string():
-	pwm = [
+	pwm1 = [
 		{'A': 0.97, 'C': 0.01, 'G': 0.01, 'T': 0.01},
 		{'A': 0.94, 'C': 0.02, 'G': 0.02, 'T': 0.02},
 		{'A': 0.91, 'C': 0.03, 'G': 0.03, 'T': 0.03},
@@ -53,7 +52,7 @@ def test_pwm2string():
 		{'A': 0.73, 'C': 0.09, 'G': 0.09, 'T': 0.09},
 		{'A': 0.70, 'C': 0.10, 'G': 0.10, 'T': 0.10},
 	]
-	m = motiflib.PWM(pwm=pwm)
-	s = motiflib.pwm2string(m, probs=myprobs)
+	m = pwm.PWM(pwm=pwm1)
+	s = pwm.pwm2string(m, probs=myprobs)
 	assert(s == 'AAAAAaaaaa')
 

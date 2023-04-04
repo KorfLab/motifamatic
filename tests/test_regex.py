@@ -1,7 +1,7 @@
+import pwm
 import pytest
 import math
 import regex
-
 
 def test_regex2pwm_ok():
 	motif = '[ACGT]A'

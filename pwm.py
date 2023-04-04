@@ -53,46 +53,6 @@ def dkl(ps, qs, check=True):
 		d += p * math.log2(p/q)
 	return d
 
-######################
-# Sequence Utilities #
-######################
-
-def anti(seq):
-	anti = ''
-	for nt in seq[::-1]:
-		if   nt == 'A': anti += 'T'
-		elif nt == 'C': anti += 'G'
-		elif nt == 'G': anti += 'C'
-		elif nt == 'T': anti += 'A'
-		elif nt == 'R': anti += 'Y'
-		elif nt == 'Y': anti += 'R'
-		elif nt == 'M': anti += 'K'
-		elif nt == 'K': anti += 'M'
-		elif nt == 'W': anti += 'W'
-		elif nt == 'S': anti += 'S'
-		elif nt == 'B': anti += 'V'
-		elif nt == 'D': anti += 'H'
-		elif nt == 'H': anti += 'D'
-		elif nt == 'V': anti += 'B'
-		elif nt == 'N': anti += 'N'
-		elif nt == 'a': anti += 't'
-		elif nt == 'c': anti += 'g'
-		elif nt == 'g': anti += 'c'
-		elif nt == 't': anti += 'a'
-		elif nt == 'r': anti += 'y'
-		elif nt == 'y': anti += 'r'
-		elif nt == 'm': anti += 'k'
-		elif nt == 'k': anti += 'm'
-		elif nt == 'w': anti += 'w'
-		elif nt == 's': anti += 's'
-		elif nt == 'b': anti += 'v'
-		elif nt == 'd': anti += 'h'
-		elif nt == 'h': anti += 'd'
-		elif nt == 'v': anti += 'b'
-		elif nt == 'n': anti += 'n'
-		else: raise
-	return anti
-
 
 #######################
 # MM/Background Class #
