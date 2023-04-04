@@ -29,12 +29,11 @@ def pwm2regex(pwm):
 	return regex
 
 pwm = pwm.string2pwm('ACRTT')
-#print(pwm.pwm_file())
-#print(pwm.string())
-#print(pwm)
+# print(pwm.pwm_file())
+# print(pwm.string())
+# print(pwm)
 
-#print(pwm2regex(pwm))
-
+# print(pwm2regex(pwm))
 seqs = [seq for seq in motif_finder.motifembedder(pwm, 0.05, 50)]
 print(seqs)
 # expected probabilities:
@@ -66,7 +65,7 @@ for t in itertools.product('ACGTRYMKWSN', repeat=5):
 	for letter in t: 
 		regex += string2re[letter]
 	count = 0
-	for seq, pos in seqs:
+	for seq, pos in zip(seqs[::2],seqs[1::2]): # loop thru list 2 items at a time
 		seq = seq.upper()
 		#print(regex, seq)
 		count += len(re.findall(regex, seq))

@@ -719,7 +719,7 @@ def align(m1, m2, gap=-2):
 ################################
 
 def regex2pwm(regex, name=None, source=None):
-	""" old implementation
+	# old implementation
 	pwm = []
 	positions = []
 	i = 0
@@ -738,8 +738,8 @@ def regex2pwm(regex, name=None, source=None):
 			p = 1 / len(pos)
 			probs[nt] = p
 		pwm.append(probs)
+	return PWM(pwm=pwm, name=name, source=source)
 	"""
-
 	pwm = []
 	pat = '([ACGT])|\[([ACGT]+)\]'
 	for m in re.finditer(pat, regex):
@@ -750,7 +750,7 @@ def regex2pwm(regex, name=None, source=None):
 		for nt in nts: prob[nt] = 1/len(nts)
 		pwm.append(prob)
 	return PWM(pwm=pwm, name=name, source=source)
-
+	"""
 
 def pwm2regex(pwm):
 	regex = ''
