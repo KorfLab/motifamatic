@@ -71,6 +71,17 @@ def anr(seqs, locs, exp):
 	if n == 0: return 0 # really?
 
 	return math.log2(n / x)
+	
+def anrwdistance(seqs, locs, exp):
+	n = 0 
+	x = 0
+	for seq, loc in zip(seqs, locs):
+		for l in loc:
+			n += (len(seq)-l)/(len(seq))
+		x += exp * len(seq)
+	
+	if n == 0: return 0
+	return math.log2(n /x)
 
 """
 A motif-finder
