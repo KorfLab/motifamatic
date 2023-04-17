@@ -76,11 +76,17 @@ bkg3 = mm.MM(far, order=0)
 # Find kmer-based motifs #
 ##########################
 random_anr = motif_finder.kmer_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr="none")
+
 close_anr = motif_finder.kmer_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr="none")
+
 far_anr = motif_finder.kmer_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr="none")
+
 random_distr = motif_finder.kmer_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 close_distr = motif_finder.kmer_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 far_distr = motif_finder.kmer_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 print("anr:")
 print(random_anr)
 print(close_anr)
@@ -96,11 +102,17 @@ print(far_distr)
 # Find regex-based motifs #
 ###########################
 random_anr = motif_finder.regex_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr="none")
+
 close_anr = motif_finder.regex_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr="none")
+
 far_anr = motif_finder.regex_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr="none")
+
 random_distr = motif_finder.regex_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 close_distr = motif_finder.regex_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 far_distr = motif_finder.regex_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr=arg.t)
+
 print("anr:")
 print(random_anr)
 print(close_anr)
