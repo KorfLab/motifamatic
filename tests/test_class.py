@@ -2,6 +2,8 @@ import math
 import pytest
 import pwm
 import tools
+import mm
+import motif_finder
 
 def test_random_motif():
 	m = pwm.random_motif(5, name='random', source='random')
@@ -27,3 +29,18 @@ def test_from_pwm():
 def test_error_from_nothing():
 	with pytest.raises(AssertionError):
 		m = pwm.PWM()
+	
+def test_anrwdistance():
+	beg_motif = ['ATAACTTTGTTCAACTTAAAATGAAGCTCCAGTAGGGAGCACGACAGAGATGTCCAGATTGAGTCAGCGT', 'CTGGTGACAACTTGGAAGGATTAAAGAGGAGAATTTAAAAAAATTAAGTTGTCAAGTGTCACGTGGCGAC','AAAAAACTTTTTATCTGCAGCCCTTGCTTAAATTTGTGGTAGACAAATGGCTTCTAAATTTAATTTTAGC']
+	end_motif = ['ATTGTTCAACTTAAAATGAAGCTCCAGTAGGGTCCAGATTGAGTAACTTCAGATCTGCGT', 'CTGGTGACGGAAGGATTAAAGAGGAGAATTTACAAGTGTCACGTGGCGGATTTAAACTTC','AAAATTTATCTGCAGCCCTTGCTTAAATTTGTTCTAACTAACTTTTAACTTGATCTTAGC']
+	bkg0 = mm.MM(beg_motif, order=0)
+	bkg1 = mm.MM(end_motif, order=0)
+	found1 = motif_finder.kmer_finder(beg_motif, bkg0, motif_finder.anrwdistance, 5)
+	found2 = motif_finder.kmer_finder(end_motif, bkg1, motif_finder.anr, 5)
+	motif_score = 0
+	for i in found1:
+		if i[0] == "GATCT":
+			motif_score = i[1]
+	for j in found2:
+		if j[0] == "GATCT":
+			assert(motif_score > i[1])
