@@ -99,7 +99,7 @@ def dl(loc, dist):
 def dq(loc, dist):
 	# scoring equation
 	if (loc >= dist): score = 0
-	else:             score = (1 / dist)(loc + dist)((dist - loc) / dist)
+	else:             score = (1 / dist)*(loc + dist)*((dist - loc) / dist)
 	return score
 
 # uniform distribution for anr with distance

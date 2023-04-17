@@ -5,14 +5,14 @@ import pwm
 import mm
 import motif_finder
 
-# Test anrwdistance
+# Test distributions with anr
 
 #######
 # CLI #
 #######
 
 parser = argparse.ArgumentParser(
-	description='Motif embedding and finding demonstration program')
+	description='Motif finding with anr distributions test program')
 parser.add_argument('-n', type=int, metavar='<int>', required=False,
 	default=50, help = 'number of sequences to generate [%(default)i]')
 parser.add_argument('-s', type=int, metavar='<n>', required=False,
@@ -23,6 +23,9 @@ parser.add_argument('-m', type=str, metavar='<motif>', required=False,
 	default='AASTT', help = 'string representation of motif [%(default)s]')
 parser.add_argument('-d', action='store_true', help='double-stranded')
 parser.add_argument('-r', action='store_true', help='fix random seed')
+parser.add_argument('-t', type=str, metavar='<string>', required=False,
+	default='none', help = 'distribution of anr: none, linear, quadratic, uniform [%(default)s]')
+	
 arg = parser.parse_args()
 
 ########
@@ -53,56 +56,56 @@ for i in range(arg.n):
 print(seqs)
 """
 
-dtest = ['AGGATCTACGTTCGAACGCATGATACTAGGATAAACCCCGGAGCTTATTATATTAGCAGT', 'AGATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGG', 'ATAGAATGTTGGACTCGCGATCCAAACTTCCCGGCCGACGGATGATGAGTCACGGGATCC']
+random = ['AGGATCTACGTTCGAACGCATGATACTAGGATAAACCCCGGAGCTTATTATATTAGCAGT', 'AGATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGG', 'ATAGAATGTTGGACTCGCGATCCAAACTTCCCGGCCGACGGATGATGAGTCACGGGATCC']
 
-dtest2 = ['AGGATCTACGTTCGATGAACGCATGATACTAGAAACCCCGGAGCTTATTATATTAGCAGT', 'AGATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGG', 'ATAGAGATATGGATGATTTGGACTCGCGATCCAAACTTCCCGGCCGACGGAGTCACGGCC']
+close = ['AGGATCTACGTTCGATGAACGCATGATACTAGAAACCCCGGAGCTTATTATATTAGCAGT', 'AGATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGG', 'ATAGAGATATGGATGATTTGGACTCGCGATCCAAACTTCCCGGCCGACGGAGTCACGGCC']
 
-dtest3 = ['AGCTACGTTCGAACGCATACTAGAAACCCCGGAGCTTATTATAGATTTGATAGCGATAGT', 'ATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGATG', 'ATAGAATGTTGGACTCGCCCAAACTTCCCGGCCGACGGATGATGAGTCAGATCGGGATCC']
+far = ['AGCTACGTTCGAACGCATACTAGAAACCCCGGAGCTTATTATAGATTTGATAGCGATAGT', 'ATCCTTGGCTTTGGTAGAGCTTTGCACGCGGCGTTAAAAGGTTGGTGCCCACGTAAGATG', 'ATAGAATGTTGGACTCGCCCAAACTTCCCGGCCGACGGATGATGAGTCAGATCGGGATCC']
 
 ###########################
 # Create background model #
 ###########################
-bkg1 = mm.MM(dtest, order=0)
+bkg1 = mm.MM(random, order=0)
 print(bkg1.mm_file())
-bkg2 = mm.MM(dtest2, order=0)
-bkg3 = mm.MM(dtest3, order=0)
+bkg2 = mm.MM(close, order=0)
+bkg3 = mm.MM(far, order=0)
 
 ##########################
 # Find kmer-based motifs #
 ##########################
-found_anr = motif_finder.kmer_finder(dtest, bkg1, motif_finder.anr, len(arg.m))
-found2_anr = motif_finder.kmer_finder(dtest2, bkg2, motif_finder.anr, len(arg.m))
-found3_anr = motif_finder.kmer_finder(dtest3, bkg3, motif_finder.anr, len(arg.m))
-found_awd = motif_finder.kmer_finder(dtest, bkg1, motif_finder.anrwdistance, len(arg.m))
-found2_awd = motif_finder.kmer_finder(dtest2, bkg2, motif_finder.anrwdistance, len(arg.m))
-found3_awd = motif_finder.kmer_finder(dtest3, bkg3, motif_finder.anrwdistance, len(arg.m))
+random_anr = motif_finder.kmer_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr="none")
+close_anr = motif_finder.kmer_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr="none")
+far_anr = motif_finder.kmer_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr="none")
+random_distr = motif_finder.kmer_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr=arg.t)
+close_distr = motif_finder.kmer_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr=arg.t)
+far_distr = motif_finder.kmer_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr=arg.t)
 print("anr:")
-print(found_anr)
-print(found2_anr)
-print(found3_anr)
+print(random_anr)
+print(close_anr)
+print(far_anr)
 print('Random (kmer):')
-print(found_awd)
+print(random_distr)
 print('Close to start (kmer):')
-print(found2_awd)
+print(close_distr)
 print('Far from start (kmer):')
-print(found3_awd)
+print(far_distr)
 
 ###########################
 # Find regex-based motifs #
 ###########################
-found_anr = motif_finder.regex_finder(dtest, bkg1, motif_finder.anr, len(arg.m))
-found2_anr = motif_finder.regex_finder(dtest2, bkg2, motif_finder.anr, len(arg.m))
-found3_anr = motif_finder.regex_finder(dtest3, bkg3, motif_finder.anr, len(arg.m))
-found_awd = motif_finder.regex_finder(dtest, bkg1, motif_finder.anrwdistance, len(arg.m))
-found2_awd = motif_finder.regex_finder(dtest2, bkg2, motif_finder.anrwdistance, len(arg.m))
-found3_awd = motif_finder.regex_finder(dtest3, bkg3, motif_finder.anrwdistance, len(arg.m))
+random_anr = motif_finder.regex_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr="none")
+close_anr = motif_finder.regex_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr="none")
+far_anr = motif_finder.regex_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr="none")
+random_distr = motif_finder.regex_finder(random, bkg1, motif_finder.anr_general, len(arg.m), distr=arg.t)
+close_distr = motif_finder.regex_finder(close, bkg2, motif_finder.anr_general, len(arg.m), distr=arg.t)
+far_distr = motif_finder.regex_finder(far, bkg3, motif_finder.anr_general, len(arg.m), distr=arg.t)
 print("anr:")
-print(found_anr)
-print(found2_anr)
-print(found3_anr)
-print('Random (kmer):')
-print(found_awd)
-print('Close to start (kmer):')
-print(found2_awd)
-print('Far from start (kmer):')
-print(found3_awd)
+print(random_anr)
+print(close_anr)
+print(far_anr)
+print('Random (regex):')
+print(random_distr)
+print('Close to start (regex):')
+print(close_distr)
+print('Far from start (regex):')
+print(far_distr)
