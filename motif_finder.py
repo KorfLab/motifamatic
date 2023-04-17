@@ -83,6 +83,57 @@ def anrwdistance(seqs, locs, exp):
 	if n == 0: return 0
 	return math.log2(n /x)
 
+# anr without distance
+def dn(loc):
+	# scoring equation
+	score = len(loc)
+	return score
+
+# linear distribution for anr with distance
+def dl(loc, dist):
+	# scoring equation
+	if (loc >= dist): score = 0
+	else:             score = (dist - loc) / (dist)
+	return score
+# quadratic distribution for anr with distance
+def dq(loc, dist):
+	# scoring equation
+	if (loc >= dist): score = 0
+	else:             score = (1 / dist)(loc + dist)((dist - loc) / dist)
+	return score
+
+# uniform distribution for anr with distance
+def du(loc, dist):
+	# scoring equation
+	if (loc >= dist): score = 0
+	else:             score = (1 / dist)
+	return score
+
+def anr_general(seqs, locs, exp, distr, d):
+	n = 0
+	x = 0
+	# distr is probability distribution for scoring
+	# default is 'none' meaning anr without distance 
+	if   distr == 'none':      pd = dn      
+	elif distr == 'linear':    pd = dl
+	elif distr == 'quadratic': pd = dq
+	elif distr == 'uniform':   pd = du
+	
+	for seq, loc in zip(seqs, locs):
+		# d is the distance after which scores = 0
+		if d == 0: dist = len(seq)
+		else:      dist = d
+		# scoring with anr no distance
+		if distr == "none":
+			n += pd(loc)
+		# scoring anr with distance
+		else: 
+			for l in loc:
+				n += pd(l, dist)
+		x += exp * dist
+	if (n == 0): return 0
+	return math.log2(n/x)
+
 """
 A motif-finder
 	requires
@@ -110,7 +161,7 @@ Given a background model, what is the prob of
 
 """
 
-def kmer_finder(seqs, bkgd, func, k, n=10):
+def kmer_finder(seqs, bkgd, func, k, n=10, distr="none", d=0):
 
 	# get all of the kmers present (rather than all possible)
 	kmers = {}
@@ -132,7 +183,7 @@ def kmer_finder(seqs, bkgd, func, k, n=10):
 				off = idx + len(kmer)
 			locs.append(pos)
 
-		score = func(seqs, locs, bkgd.seq_prob(kmer))
+		score = func(seqs, locs, bkgd.seq_prob(kmer), distr, d)
 		keep.append( (kmer, score) )
 
 		# prevent the list from growing too much
@@ -162,7 +213,8 @@ XNT = {
 	'N': 1.00,
 }
 
-def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN'):
+def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN',
+                 distr="none", d=0):
 
 	keep = []
 	for t in itertools.product(alph, repeat=k):
@@ -181,7 +233,7 @@ def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN'):
 				pos.append(m.span()[0])
 			locs.append(pos)
 
-		score = func(seqs, locs, bkgd.re_prob(regex))
+		score = func(seqs, locs, bkgd.re_prob(regex), distr, d)
 		keep.append( (regex, score) )
 
 		# prevent the list from growing too much
