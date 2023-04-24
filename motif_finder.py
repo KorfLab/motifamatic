@@ -35,6 +35,7 @@ def motifembedder(pwm, p, size, choice='ACGT', strand='='):
 
 	return seq, locs
 
+
 """
 
 A scoring function
@@ -245,8 +246,23 @@ def regex_finder(seqs, bkgd, func, k, n=10, x=0.35, alph='ACGTRYMKWSN',
 	keep = sorted(keep, key=lambda t: t[1], reverse=True)
 	return keep[:n]
 
-def dpwm_finder(seqs, bkgd, func, k, n=10, alph='ACGTRYMKWSN'):
-	pass
+def dpwm_finder(seqs, bkgd, func, k, t, n=10, alph='ACGTRYMKWSN', distr="none", d=0):
+	# t = threshold
+	keep = []
+	for seq in seqs:
+		for i in range(len(seq)-k+1):
+			kmer = seq[i:i+k]
+			kmer_pwm = pwm.string2pwm(kmer)
+			locs = []
+			for seq1 in seqs:
+				pos = []
+				for m in re.finditer(kmer, seq1):
+					pos.append(m.span()[0])
+				locs.append(pos)
+			# Need to get score of kmer based on dsPWM
+			score = func(seqs, locs, bkgd.pwm_prob(kmer), distr, d)
+			if score > t and kmer not in keep: keep.append(kmer)
+	return keep
 
 
 def motiffinder(seqs, k):
