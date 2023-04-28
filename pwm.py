@@ -684,9 +684,12 @@ def align(m1, m2, gap=-2):
             elif left > top:
                 scores[j][i] = left
                 trace[j][i] = 'L'
-
+		
     seq = ""
+    seq_out = pwm2string(m1)
+    que_out = pwm2string(m2)
     que = ""
+    alignment = ""
     j = maxj
     i = maxi
     totalscore = 0.0
@@ -695,24 +698,32 @@ def align(m1, m2, gap=-2):
         if scores[j][i] == 0:
             break
         if trace[j][i] == 'U':
-            seq += f'{i}'
+            seq += seq_out[i-1]
             que += '-'
+            alignment += " "
             i -= 1
         elif trace[j][i] == 'L':
-            que += f'{j}'
+            que += que_out[j-1]
             seq += '-'
+            alignment += " "
             j -= 1
         elif trace[j][i] == 'D':
-            que += f'{j}'
-            seq += f'{i}'
+            que += que_out[j-1]
+            seq += seq_out[i-1]
+            if scores[j][i] > 1.0: alignment += "|"
             i -= 1
             j -= 1
 
     #prints out location in sequence rather than nts
     print(seq[::-1])
+    print(alignment[::-1])
     print(que[::-1])
     print(f'Score: {totalscore}')
-    pass
+
+seq = PWM(seqs=["TGTTACGG"])
+query = PWM(seqs=["GGTTGACTA"])
+#print(pwm2string(seq))
+#align(seq, query)
 
 ################################
 # Regular Expressions and PWMs #
